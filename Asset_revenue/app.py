@@ -1,4 +1,4 @@
-from flask import Flask
+from flask import Flask, app
 from flask_login import LoginManager
 from flask_migrate import Migrate
 from models import db, User, Department
@@ -31,11 +31,17 @@ def create_app():
     from routes.user_routes import user_bp
     from routes.admin_routes import admin_bp
     from routes.depart_routes import depart_bp
+    from routes.admin_user_routes import admin_user_bp
+    from routes.admin_department_routes import admin_department_bp
+    from routes.admin_dashboard_routes import admin_dashboard_bp
 
     app.register_blueprint(auth_bp, url_prefix='/auth')
     app.register_blueprint(user_bp, url_prefix='/user')
     app.register_blueprint(admin_bp, url_prefix='/admin')
     app.register_blueprint(depart_bp, url_prefix='/departments')
+    app.register_blueprint(admin_user_bp)
+    app.register_blueprint(admin_department_bp)
+    app.register_blueprint(admin_dashboard_bp)
 
     @login_manager.user_loader
     def load_user(user_id):

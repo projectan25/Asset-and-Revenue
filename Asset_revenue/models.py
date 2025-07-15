@@ -10,31 +10,21 @@ class Department(db.Model):
     __tablename__ = 'departments'
     depart_code = db.Column(db.String(20), primary_key=True)
     depart_name = db.Column(db.String(100), nullable=False)
-    users = db.relationship('User', backref='department', lazy=True)
 
+# models.py
 class User(db.Model, UserMixin):
     __tablename__ = 'users'
-    User_id = db.Column(db.Integer, primary_key=True)
+    
+    id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(80), unique=True, nullable=False)
     email = db.Column(db.String(120), unique=True, nullable=False)
-    user_role = db.Column(db.String(20), nullable=False, default='user')  # 'admin' or 'user'
-    depart_code = db.Column(db.String(20), db.ForeignKey('departments.depart_code'))
-    password_hash = db.Column(db.String(128), nullable=False)
-    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
+    password_hash = db.Column(db.String(128))
+    user_role = db.Column(db.String(20), default='user')
     is_global_admin = db.Column(db.Boolean, default=False)
+    depart_code = db.Column(db.String(10), db.ForeignKey('departments.depart_code'))
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
     
-    def set_password(self, password):
-        self.password_hash = generate_password_hash(password)
-    
-    def check_password(self, password):
-        return check_password_hash(self.password_hash, password)
-    
-    def get_id(self):
-        return str(self.User_id)
-    
-    def has_admin_access(self):
-        """Check if user has admin privileges"""
-        return self.is_global_admin
+    department = db.relationship('Department', backref='users')
     
     def __repr__(self):
         return f'<User {self.username}>'
@@ -92,7 +82,7 @@ class SubLedger(db.Model):
 class Receipt(db.Model):
     __tablename__ = 'receipts'
     receipt_id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey('users.User_id'), nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
     depart_code = db.Column(db.String(20), db.ForeignKey('departments.depart_code'), nullable=False)
     
     # Category fields as strings
@@ -111,7 +101,6 @@ class Receipt(db.Model):
 
     def __repr__(self):
         return f'<Receipt {self.receipt_id} by User {self.user_id}>'
-    
 
 
 
