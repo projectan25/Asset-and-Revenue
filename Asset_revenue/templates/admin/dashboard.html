@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+
+{% block title %}Admin Dashboard{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <h1 class="mb-4">Admin Dashboard</h1>
+    
+    <div class="row">
+        <div class="col-md-4">
+            <div class="card text-white bg-primary mb-3">
+                <div class="card-header">Users</div>
+                <div class="card-body">
+                    <h5 class="card-title">Manage Users</h5>
+                    <p class="card-text">View, add, edit, and delete system users.</p>
+                    <a href="{{ url_for('admin.manage_users') }}" class="btn btn-light">Go to Users</a>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-4">
+            <div class="card text-white bg-success mb-3">
+                <div class="card-header">Departments</div>
+                <div class="card-body">
+                    <h5 class="card-title">Manage Departments</h5>
+                    <p class="card-text">View and manage all departments.</p>
+                    <a href="{{ url_for('admin.manage_departments') }}" class="btn btn-light">Go to Departments</a>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-4">
+            <div class="card text-white bg-info mb-3">
+                <div class="card-header">Reports</div>
+                <div class="card-body">
+                    <h5 class="card-title">View Reports</h5>
+                    <p class="card-text">Generate and view system reports.</p>
+                    <a href="{{ url_for('admin.create_user') }}" class="btn btn-light">View Reports</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

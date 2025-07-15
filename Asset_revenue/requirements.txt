@@ -1,0 +1,15 @@
+flask
+flask_migrate
+flask_sqlalchemy
+flask_login
+flask_wtf
+flask_mail
+flask_bcrypt
+flask_cors
+flask_restful
+flask_jwt_extended
+sqlalchemy
+requests
+python-dotenv
+gunicorn
+psycopg2-binary

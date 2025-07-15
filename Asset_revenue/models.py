@@ -1,44 +1,41 @@
+from flask_login import UserMixin
 from flask_sqlalchemy import SQLAlchemy
 import re
-from datetime import datetime
+from datetime import datetime, timezone
 from werkzeug.security import generate_password_hash, check_password_hash
 db = SQLAlchemy()
 
 
-# Department Model
 class Department(db.Model):
     __tablename__ = 'departments'
     depart_code = db.Column(db.String(20), primary_key=True)
     depart_name = db.Column(db.String(100), nullable=False)
-    
-    # Relationship with User (one-to-many: one department can have many users)
     users = db.relationship('User', backref='department', lazy=True)
 
-    def __repr__(self):
-        return f'<Department {self.depart_name}>'
-
-
-class User(db.Model):
+class User(db.Model, UserMixin):
     __tablename__ = 'users'
     User_id = db.Column(db.Integer, primary_key=True)
-    user_role = db.Column(db.String(20), nullable=False)
     username = db.Column(db.String(80), unique=True, nullable=False)
     email = db.Column(db.String(120), unique=True, nullable=False)
-    
-    # ForeignKey to Department (using depart_code as the primary key)
-    depart_code = db.Column(db.String(20), 
-                          db.ForeignKey('departments.depart_code'), 
-                          nullable=False)
-    
+    user_role = db.Column(db.String(20), nullable=False, default='user')  # 'admin' or 'user'
+    depart_code = db.Column(db.String(20), db.ForeignKey('departments.depart_code'))
     password_hash = db.Column(db.String(128), nullable=False)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
-
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
+    is_global_admin = db.Column(db.Boolean, default=False)
+    
     def set_password(self, password):
         self.password_hash = generate_password_hash(password)
-
+    
     def check_password(self, password):
         return check_password_hash(self.password_hash, password)
-
+    
+    def get_id(self):
+        return str(self.User_id)
+    
+    def has_admin_access(self):
+        """Check if user has admin privileges"""
+        return self.is_global_admin
+    
     def __repr__(self):
         return f'<User {self.username}>'
     
