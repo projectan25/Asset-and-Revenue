@@ -1,0 +1,450 @@
+{% extends "base.html" %}
+{% block content %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="csrf-token" content="{{ csrf_token() }}">
+    <title>Department Management</title>
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- DataTables CSS -->
+    <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/dataTables.bootstrap5.min.css">
+    <style>
+        body {
+            background-color: #f8f9fa;
+            color: #212529;
+        }
+        
+        .card {
+            border: none;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+            margin-bottom: 20px;
+        }
+        
+        .card-header {
+            background-color: #fff;
+            border-bottom: 1px solid #eaeaea;
+            font-weight: 600;
+            padding: 15px 20px;
+        }
+        
+        .table-responsive {
+            border-radius: 8px;
+            overflow: hidden;
+        }
+        
+        .table {
+            margin-bottom: 0;
+        }
+        
+        .table thead th {
+            background-color: #f8f9fa;
+            border-bottom: 2px solid #dee2e6;
+            font-weight: 600;
+            padding: 12px 15px;
+        }
+        
+        .table tbody td {
+            padding: 12px 15px;
+            vertical-align: middle;
+        }
+        
+        .table tbody tr:hover {
+            background-color: #f8f9fa;
+        }
+        
+        .btn-primary {
+            background-color: #3f80ea;
+            border-color: #3f80ea;
+        }
+        
+        .btn-primary:hover {
+            background-color: #2c6ed5;
+            border-color: #2c6ed5;
+        }
+        
+        .btn-outline-danger {
+            color: #dc3545;
+            border-color: #dc3545;
+        }
+        
+        .btn-outline-danger:hover {
+            background-color: #dc3545;
+            color: white;
+        }
+        
+        .badge-count {
+            background-color: #6c757d;
+            font-size: 0.8em;
+            font-weight: 500;
+        }
+        
+        .form-control, .form-select {
+            border-radius: 4px;
+            border: 1px solid #ced4da;
+        }
+        
+        .action-btns .btn {
+            padding: 0.3rem 0.6rem;
+            font-size: 0.875rem;
+            margin-right: 5px;
+        }
+        
+        .breadcrumb {
+            background-color: transparent;
+            padding: 0;
+        }
+        
+        .page-title {
+            font-weight: 600;
+            color: #343a40;
+        }
+        
+        .alert {
+            border-radius: 4px;
+        }
+        
+        .modal-header {
+            border-bottom: 1px solid #eaeaea;
+        }
+        
+        .modal-footer {
+            border-top: 1px solid #eaeaea;
+        }
+        
+        .status-badge {
+            padding: 5px 10px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 500;
+        }
+        
+        .status-active {
+            background-color: #e6f7ee;
+            color: #28a745;
+        }
+        
+        .status-inactive {
+            background-color: #fce8e8;
+            color: #dc3545;
+        }
+    </style>
+</head>
+<body>
+    <div class="container-fluid py-4">
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h2 class="page-title mb-0"><i class="fas fa-building me-2"></i>Department Management</h2>
+                        <nav aria-label="breadcrumb">
+                            <ol class="breadcrumb">
+                                <li class="breadcrumb-item"><a href="/admin">Admin</a></li>
+                                <li class="breadcrumb-item active" aria-current="page">Departments</li>
+                            </ol>
+                        </nav>
+                    </div>
+                    <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addDepartmentModal">
+                        <i class="fas fa-plus me-2"></i>Add Department
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Flash Messages -->
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="alert alert-{{ category }} alert-dismissible fade show mb-4" role="alert">
+                        {{ message }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                    </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+
+        <div class="row">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0">Department List</h5>
+                        <div class="d-flex">
+                            <div class="input-group input-group-sm" style="width: 250px;">
+                                <input type="text" class="form-control" id="searchInput" placeholder="Search departments...">
+                                <button class="btn btn-outline-secondary" type="button" id="searchButton">
+                                    <i class="fas fa-search"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table id="departmentsTable" class="table table-hover" style="width:100%">
+                                <thead>
+                                    <tr>
+                                        <th>Code</th>
+                                        <th>Name</th>
+                                        <th>Status</th>
+                                        <th>Users</th>
+                                        <th>Created</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for department in departments %}
+                                    <tr>
+                                        <td><strong>{{ department.depart_code }}</strong></td>
+                                        <td>{{ department.depart_name }}</td>
+                                        <td>
+                                            <span class="status-badge {% if department.status == 'active' %}status-active{% else %}status-inactive{% endif %}">
+                                                {{ department.status|capitalize }}
+                                            </span>
+                                        </td>
+                                        <td>
+                                            <span class="badge bg-secondary badge-count">
+                                                {{ department.users|length }} users
+                                            </span>
+                                        </td>
+                                        <td>{{ department.created_at.strftime('%Y-%m-%d') if department.created_at else '-' }}</td>
+                                        <td class="action-btns">
+                                            <button class="btn btn-sm btn-outline-primary edit-department" 
+                                                    data-department-code="{{ department.depart_code }}">
+                                                <i class="fas fa-edit"></i>
+                                            </button>
+                                            <button class="btn btn-sm btn-outline-danger delete-department" 
+                                                    data-department-code="{{ department.depart_code }}"
+                                                    {% if department.users %}disabled title="Cannot delete department with users"{% endif %}>
+                                                <i class="fas fa-trash-alt"></i>
+                                            </button>
+                                        </td>
+                                    </tr>
+                                    {% else %}
+                                    <tr>
+                                        <td colspan="6" class="text-center py-4 text-muted">
+                                            No departments found. Add one using the button above.
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add Department Modal -->
+    <div class="modal fade" id="addDepartmentModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Add New Department</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <form id="addDepartmentForm" method="POST" action="{{ url_for('admin_department.create_department') }}">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                    <div class="modal-body">
+                        <div class="mb-3">
+                            <label for="depart_code" class="form-label">Department Code</label>
+                            <input type="text" class="form-control" id="depart_code" name="depart_code" 
+                                placeholder="e.g., DEPT001" required>
+                            <small class="text-muted">Unique identifier for the department</small>
+                        </div>
+                        <div class="mb-3">
+                            <label for="depart_name" class="form-label">Department Name</label>
+                            <input type="text" class="form-control" id="depart_name" name="depart_name" 
+                                placeholder="e.g., Human Resources" required>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                        <button type="submit" class="btn btn-primary">Save Department</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit Department Modal -->
+    <div class="modal fade" id="editDepartmentModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Edit Department</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <form id="editDepartmentForm" method="POST" action="">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                    <div class="modal-body" id="editDepartmentBody">
+                        <!-- Content will be loaded via AJAX -->
+                        <div class="text-center py-4">
+                            <div class="spinner-border text-primary" role="status">
+                                <span class="visually-hidden">Loading...</span>
+                            </div>
+                            <p class="mt-2">Loading department details...</p>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                        <button type="submit" class="btn btn-primary">Save Changes</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- jQuery and Bootstrap JS -->
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- DataTables JS -->
+    <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
+    <script src="https://cdn.datatables.net/1.13.6/js/dataTables.bootstrap5.min.js"></script>
+
+    <script>
+    $(document).ready(function() {
+        // Get CSRF token from meta tag
+        var csrfToken = $('meta[name="csrf-token"]').attr('content');
+        
+        // Set up AJAX to include CSRF token in headers
+        $.ajaxSetup({
+            beforeSend: function(xhr, settings) {
+                if (!/^(GET|HEAD|OPTIONS|TRACE)$/i.test(settings.type)) {
+                    xhr.setRequestHeader("X-CSRFToken", csrfToken);
+                }
+            }
+        });
+
+        // Initialize DataTable
+        var table = $('#departmentsTable').DataTable({
+            responsive: true,
+            order: [[0, 'asc']],
+            pageLength: 25,
+            language: {
+                search: "_INPUT_",
+                searchPlaceholder: "Search departments...",
+            }
+        });
+
+        // Search functionality
+        $('#searchInput').keyup(function(){
+            table.search($(this).val()).draw();
+        });
+
+        // Edit Department Button Click
+        $('.edit-department').click(function() {
+            var deptCode = $(this).data('department-code');
+            var modal = $('#editDepartmentModal');
+            
+            // Set the form action
+            $('#editDepartmentForm').attr('action', '/admin/departments/' + deptCode + '/edit');
+            
+            // Load department data via AJAX
+            $.ajax({
+                url: '/admin/departments/' + deptCode,
+                method: 'GET',
+                success: function(response) {
+                    $('#editDepartmentBody').html(`
+                        <div class="mb-3">
+                            <label for="edit_depart_code" class="form-label">Department Code</label>
+                            <input type="text" class="form-control" id="edit_depart_code" 
+                                name="depart_code" value="${response.depart_code}" readonly>
+                        </div>
+                        <div class="mb-3">
+                            <label for="edit_depart_name" class="form-label">Department Name</label>
+                            <input type="text" class="form-control" id="edit_depart_name" 
+                                name="depart_name" value="${response.depart_name}" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Status</label>
+                            <select class="form-select" name="status">
+                                <option value="active" ${response.status === 'active' ? 'selected' : ''}>Active</option>
+                                <option value="inactive" ${response.status === 'inactive' ? 'selected' : ''}>Inactive</option>
+                            </select>
+                        </div>
+                        <input type="hidden" name="csrf_token" value="${csrfToken}"/>
+                    `);
+                },
+                error: function(xhr) {
+                    $('#editDepartmentBody').html(`
+                        <div class="alert alert-danger">
+                            Failed to load department details. Please try again.
+                        </div>
+                    `);
+                }
+            });
+            
+            modal.modal('show');
+        });
+
+        // Delete Department Button Click
+        $('.delete-department').click(function() {
+            var deptCode = $(this).data('department-code');
+            var row = $(this).closest('tr');
+            
+            if (confirm('Are you sure you want to delete department ' + deptCode + '?')) {
+                $.ajax({
+                    url: '/admin/departments/' + deptCode + '/delete',
+                    method: 'POST',
+                    data: {
+                        csrf_token: csrfToken
+                    },
+                    success: function(response) {
+                        table.row(row).remove().draw();
+                        alert('Department deleted successfully');
+                    },
+                    error: function(xhr) {
+                        alert('Failed to delete department: ' + (xhr.responseJSON?.error || 'Unknown error'));
+                    }
+                });
+            }
+        });
+
+        // Form submission handlers
+        $('#addDepartmentForm').submit(function(e) {
+            e.preventDefault();
+            var form = $(this);
+            var formData = form.serialize();
+            
+            $.ajax({
+                url: form.attr('action'),
+                method: 'POST',
+                data: formData,
+                success: function(response) {
+                    $('#addDepartmentModal').modal('hide');
+                    location.reload();
+                },
+                error: function(xhr) {
+                    alert('Failed to add department: ' + (xhr.responseJSON?.error || 'Unknown error'));
+                }
+            });
+        });
+
+        $('#editDepartmentForm').submit(function(e) {
+            e.preventDefault();
+            var form = $(this);
+            var formData = form.serialize();
+            
+            $.ajax({
+                url: form.attr('action'),
+                method: 'POST',
+                data: formData,
+                success: function(response) {
+                    $('#editDepartmentModal').modal('hide');
+                    location.reload();
+                },
+                error: function(xhr) {
+                    alert('Failed to update department: ' + (xhr.responseJSON?.error || 'Unknown error'));
+                }
+            });
+        });
+    });
+    </script>
+</body>
+</html>
+{% endblock %}

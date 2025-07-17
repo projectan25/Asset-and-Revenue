@@ -9,8 +9,8 @@ user_bp = Blueprint('user', __name__)
 @login_required
 def user_dashboard():
     # Get user's receipts or other relevant data
-    user_receipts = Receipt.query.filter_by(user_id=current_user.user_id).all()
-    return render_template('user/user_dashboard.html', receipts=user_receipts)
+    user_receipts = Receipt.query.filter_by(user_id=current_user.id).all()
+    return render_template('user/dashboard.html', receipts=user_receipts)
 
 @user_bp.route('/profile')
 @login_required

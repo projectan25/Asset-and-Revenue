@@ -34,6 +34,7 @@ def create_app():
     from routes.admin_user_routes import admin_user_bp
     from routes.admin_department_routes import admin_department_bp
     from routes.admin_dashboard_routes import admin_dashboard_bp
+    from routes.receipt_routes import receipt_bp
 
     app.register_blueprint(auth_bp, url_prefix='/auth')
     app.register_blueprint(user_bp, url_prefix='/user')
@@ -42,6 +43,7 @@ def create_app():
     app.register_blueprint(admin_user_bp)
     app.register_blueprint(admin_department_bp)
     app.register_blueprint(admin_dashboard_bp)
+    app.register_blueprint(receipt_bp, url_prefix='/receipts')
 
     @login_manager.user_loader
     def load_user(user_id):
