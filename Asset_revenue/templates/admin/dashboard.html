@@ -31,14 +31,14 @@
         
         <div class="col-md-4">
             <div class="card text-white bg-info mb-3">
-                <div class="card-header">Reports</div>
+                <div class="card-header">Accounting Hierarchy</div>
                 <div class="card-body">
-                    <h5 class="card-title">View Reports</h5>
-                    <p class="card-text">Generate and view system reports.</p>
-                    <a href="{{ url_for('admin.create_user') }}" class="btn btn-light">View Reports</a>
+                    <h5 class="card-title">Manage Accounting Structure</h5>
+                    <p class="card-text">Manage Main Headings, Major Heads, Sub Heads, and Sub Ledgers.</p>
+                    <a href="{{ url_for('accounting.accounting_hierarchy') }}" class="btn btn-light">Open Hierarchy Manager</a>
                 </div>
             </div>
-        </div>
+</div>
     </div>
 </div>
 {% endblock %}

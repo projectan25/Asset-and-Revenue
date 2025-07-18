@@ -7,6 +7,8 @@ from functools import wraps
 
 admin_bp = Blueprint('admin', __name__, url_prefix='/admin')
 
+############################## Admin Dashboard ###############################################################
+
 def admin_required(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
@@ -29,17 +31,7 @@ def admin_dashboard():
                          total_departments=total_departments,
                          recent_users=recent_users)
 
-@admin_bp.route('/users')
-@login_required
-@admin_required
-def manage_users():
-    users = User.query.order_by(User.created_at.desc()).all()
-    departments = Department.query.order_by(Department.depart_name).all()
-    return render_template('admin/users.html', 
-                         users=users, 
-                         departments=departments)
-
-
+############################### User Management ###############################################################
 
 @admin_bp.route('/users/create', methods=['POST'])
 @login_required
@@ -96,6 +88,19 @@ def delete_user(user_id):
         flash('User deleted successfully', 'success')
     return redirect(url_for('admin.manage_users'))
 
+@admin_bp.route('/users')
+@admin_required
+def manage_users():
+    page = request.args.get('page', 1, type=int)
+    users = User.query.order_by(User.username.asc()).paginate(page=page, per_page=10)
+    departments = Department.query.all()
+    return render_template('admin/users.html', users=users, departments=departments)
+
+
+############################## Department Management###############################################################
+
+
+
 @admin_bp.route('/departments')
 @login_required
 @admin_required
@@ -124,21 +129,76 @@ def create_department():
     flash('Department created successfully', 'success')
     return redirect(url_for('admin.manage_departments'))
 
-@admin_bp.route('/departments/<string:depart_code>/delete', methods=['POST'])
+
+@admin_bp.route('/api/departments/<string:depart_code>')
 @login_required
 @admin_required
-def delete_department(depart_code):
+def api_department(depart_code):
+    try:
+        department = Department.query.get_or_404(depart_code)
+        return jsonify({
+            'code': department.depart_code,
+            'name': department.depart_name
+        })
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+    
+@admin_bp.route('/departments/<string:depart_code>/edit', methods=['POST'])
+@login_required
+@admin_required
+def edit_department(depart_code):
+    # Get form data
+    data = request.get_json() if request.is_json else request.form
+    new_code = data.get('depart_code')
+    new_name = data.get('depart_name')
+    
+    # Validate required fields
+    if not new_name or not new_code:
+        return jsonify({
+            'success': False,
+            'message': 'Both department code and name are required'
+        }), 400
+    
+    # Get the existing department
     department = Department.query.get_or_404(depart_code)
     
-    # Check if department has users
-    if department.users:
-        flash('Cannot delete department with assigned users', 'danger')
-    else:
-        db.session.delete(department)
-        db.session.commit()
-        flash('Department deleted successfully', 'success')
+    # Check if new code already exists (if it's being changed)
+    if new_code != depart_code:
+        if Department.query.filter_by(depart_code=new_code).first():
+            return jsonify({
+                'success': False,
+                'message': 'Department code already exists'
+            }), 400
     
-    return redirect(url_for('admin.manage_departments'))
+    # Check if name already exists (if it's being changed)
+    if new_name != department.depart_name:
+        if Department.query.filter(Department.depart_name == new_name).first():
+            return jsonify({
+                'success': False,
+                'message': 'Department name already exists'
+            }), 400
+    
+    # Update the department
+    department.depart_code = new_code
+    department.depart_name = new_name
+    
+    try:
+        db.session.commit()
+        return jsonify({
+            'success': True,
+            'message': 'Department updated successfully',
+            'department': {
+                'code': department.depart_code,
+                'name': department.depart_name
+            }
+        })
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({
+            'success': False,
+            'message': 'Error updating department',
+            'error': str(e)
+        }), 500
 
 # API Endpoints
 @admin_bp.route('/api/users')

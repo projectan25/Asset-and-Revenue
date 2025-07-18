@@ -1,135 +1,532 @@
-{% extends "admin/base.html" %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>ERP User Management</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
 
-{% block content %}
-<div class="container-fluid">
-    <h1 class="mt-4">User Management</h1>
-    
-    <!-- Flash Messages -->
-    {% with messages = get_flashed_messages(with_categories=true) %}
-        {% if messages %}
-            {% for category, message in messages %}
-                <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
-                    {{ message }}
-                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-                </div>
-            {% endfor %}
-        {% endif %}
-    {% endwith %}
+  <!-- Bootstrap 5 CSS -->
+  <link
+    href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
+    rel="stylesheet"
+  />
 
-    <!-- Create User Button -->
-    <div class="d-flex justify-content-between mb-3">
-        <div></div>
-        <button class="btn btn-primary" type="button" data-bs-toggle="collapse" data-bs-target="#createUserForm">
-            <i class="fas fa-plus me-1"></i> Create User
-        </button>
+  <!-- Font Awesome -->
+  <link
+    rel="stylesheet"
+    href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"
+  />
+
+  <style>
+    body {
+      background-color: #f4f6f9;
+      font-family: "Segoe UI", sans-serif;
+    }
+
+    .card {
+      border: none;
+      box-shadow: 0 0.75rem 1.5rem rgba(0, 0, 0, 0.05);
+    }
+
+    .table th {
+      background-color: #0d6efd;
+      color: white;
+    }
+
+    .control-panel {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 1rem;
+    }
+
+    .dataTables-controls {
+      display: flex;
+      gap: 1rem;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
+    .dataTables-controls select,
+    .dataTables-controls input {
+      max-width: 120px;
+    }
+
+    .pagination {
+      margin: 0;
+    }
+
+    .pagination .page-item .page-link {
+      color: #0d6efd;
+      cursor: pointer;
+    }
+
+    .pagination .page-item.active .page-link {
+      background-color: #0d6efd;
+      border-color: #0d6efd;
+      color: white;
+      cursor: default;
+    }
+
+    #alertContainer {
+      position: fixed;
+      top: 1rem;
+      right: 1rem;
+      z-index: 1055;
+      min-width: 300px;
+    }
+
+    th.sortable {
+      cursor: pointer;
+      user-select: none;
+    }
+
+    th.sortable .fa-caret-down,
+    th.sortable .fa-caret-up {
+      margin-left: 5px;
+      font-size: 0.75rem;
+      color: #fff;
+      opacity: 0.75;
+    }
+  </style>
+</head>
+<body>
+  <div class="container py-5">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+      <h2 class="mb-0">User Management</h2>
+      <button
+        class="btn btn-primary"
+        data-bs-toggle="modal"
+        data-bs-target="#userModal"
+        onclick="openAddUserModal()"
+      >
+        <i class="fas fa-user-plus me-1"></i> Create User
+      </button>
     </div>
 
-    <!-- Create User Form -->
-    <div class="collapse mb-4" id="createUserForm">
-        <div class="card card-body">
-            <h5 class="card-title mb-3">Create New User</h5>
-            <form method="POST" action="{{ url_for('admin.create_user') }}">
-                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
-                <div class="row g-3">
-                    <div class="col-md-6">
-                        <label for="username" class="form-label">Username</label>
-                        <input type="text" class="form-control" id="username" name="username" required>
-                    </div>
-                    <div class="col-md-6">
-                        <label for="email" class="form-label">Email</label>
-                        <input type="email" class="form-control" id="email" name="email" required>
-                    </div>
-                    <div class="col-md-6">
-                        <label for="password" class="form-label">Password</label>
-                        <input type="password" class="form-control" id="password" name="password" required>
-                    </div>
-                    <div class="col-md-6">
-                        <label for="depart_code" class="form-label">Department</label>
-                        <select class="form-select" id="depart_code" name="depart_code">
-                            <option value="">None</option>
-                            {% for department in departments %}
-                            <option value="{{ department.depart_code }}">{{ department.depart_name }}</option>
-                            {% endfor %}
-                        </select>
-                    </div>
-                    <div class="col-12">
-                        <div class="form-check">
-                            <input class="form-check-input" type="checkbox" id="is_admin" name="is_admin">
-                            <label class="form-check-label" for="is_admin">
-                                Make this user an administrator
-                            </label>
-                        </div>
-                    </div>
-                    <div class="col-12">
-                        <button type="submit" class="btn btn-success me-2">
-                            <i class="fas fa-save me-1"></i> Create User
-                        </button>
-                        <button type="button" class="btn btn-secondary" data-bs-toggle="collapse" data-bs-target="#createUserForm">
-                            <i class="fas fa-times me-1"></i> Cancel
-                        </button>
-                    </div>
-                </div>
-            </form>
-        </div>
+    <div id="alertContainer"></div>
+
+    <div class="control-panel mb-2">
+      <div class="dataTables-controls">
+        <label class="form-label mb-0 me-2">
+          Show
+          <select
+            class="form-select d-inline-block w-auto"
+            id="entriesSelect"
+            onchange="changePage(1); renderTable()"
+          >
+            <option value="5">5</option>
+            <option value="10" selected>10</option>
+            <option value="15">15</option>
+          </select>
+          entries
+        </label>
+
+        <label class="form-label mb-0">
+          Search
+          <input
+            type="text"
+            class="form-control d-inline-block w-auto"
+            id="searchInput"
+            oninput="changePage(1); renderTable()"
+            placeholder="Search users..."
+          />
+        </label>
+      </div>
+
+      <ul class="pagination pagination-sm" id="pagination"></ul>
     </div>
 
-    <!-- Users Table -->
-    <div class="card mb-4">
-        <div class="card-header d-flex justify-content-between align-items-center">
-            <div>
-                <i class="fas fa-users me-1"></i>
-                System Users
-            </div>
-            <div class="text-muted small">
-                Total: {{ users|length }} users
-            </div>
-        </div>
-        <div class="card-body">
-            <div class="table-responsive">
-                <table class="table table-hover table-bordered">
-                    <thead class="table-light">
-                        <tr>
-                            <th>Username</th>
-                            <th>Email</th>
-                            <th>Department</th>
-                            <th>Role</th>
-                            <th>Created</th>
-                            <th>Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for user in users %}
-                        <tr>
-                            <td>{{ user.username }}</td>
-                            <td>{{ user.email }}</td>
-                            <td>{{ user.department.depart_name if user.department else 'None' }}</td>
-                            <td>
-                                <span class="badge {{ 'bg-danger' if user.is_global_admin else 'bg-primary' }}">
-                                    {{ 'Admin' if user.is_global_admin else 'User' }}
-                                </span>
-                            </td>
-                            <td>{{ user.created_at.strftime('%Y-%m-%d') }}</td>
-                            <td class="text-nowrap">
-                                <form method="POST" action="{{ url_for('admin.toggle_admin', user_id=user.id) }}" class="d-inline">
-                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
-                                    <button type="submit" class="btn btn-sm {{ 'btn-warning' if user.is_global_admin else 'btn-success' }}">
-                                        <i class="fas {{ 'fa-user-times' if user.is_global_admin else 'fa-user-shield' }} me-1"></i>
-                                        {{ 'Revoke Admin' if user.is_global_admin else 'Make Admin' }}
-                                    </button>
-                                </form>
-                                <form method="POST" action="{{ url_for('admin.delete_user', user_id=user.id) }}" class="d-inline ms-1">
-                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
-                                    <button type="submit" class="btn btn-sm btn-danger" onclick="return confirm('Are you sure you want to delete this user?')">
-                                        <i class="fas fa-trash-alt me-1"></i> Delete
-                                    </button>
-                                </form>
-                            </td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
-        </div>
+    <div class="card">
+      <div class="table-responsive">
+        <table class="table table-hover mb-0">
+          <thead>
+            <tr>
+              <th class="sortable" onclick="sortBy('id')">
+                ID <i id="sortIconId" class="fas fa-caret-down"></i>
+              </th>
+              <th class="sortable" onclick="sortBy('role')">
+                Role <i id="sortIconRole" class="fas fa-caret-down" style="display:none"></i>
+              </th>
+              <th class="sortable" onclick="sortBy('username')">
+                Username <i id="sortIconUsername" class="fas fa-caret-down" style="display:none"></i>
+              </th>
+              <th class="sortable" onclick="sortBy('email')">
+                Email <i id="sortIconEmail" class="fas fa-caret-down" style="display:none"></i>
+              </th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="userTableBody"></tbody>
+        </table>
+      </div>
     </div>
+  </div>
+
+  <!-- User Modal -->
+  <div
+    class="modal fade"
+    id="userModal"
+    tabindex="-1"
+    aria-labelledby="userModalLabel"
+    aria-hidden="true"
+  >
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+      <div class="modal-content">
+        <form id="userForm" onsubmit="event.preventDefault(); addOrUpdateUser()">
+          <div class="modal-header">
+            <h5 class="modal-title" id="userModalLabel">Add User</h5>
+            <button
+              type="button"
+              class="btn-close"
+              data-bs-dismiss="modal"
+              aria-label="Close"
+              onclick="resetForm()"
+            ></button>
+          </div>
+          <div class="modal-body">
+            <div class="row g-3">
+              <div class="col-md-3">
+                <label for="inputId" class="form-label">User ID</label>
+                <input type="number" class="form-control" id="inputId" min="1" required />
+                <div class="invalid-feedback" id="idFeedback"></div>
+              </div>
+              <div class="col-md-3">
+                <label for="inputRole" class="form-label">Role</label>
+                <select class="form-select" id="inputRole" required>
+                  <option value="admin">Admin</option>
+                  <option value="staff">Staff</option>
+                </select>
+              </div>
+              <div class="col-md-3">
+                <label for="inputUsername" class="form-label">Username</label>
+                <input type="text" class="form-control" id="inputUsername" required />
+              </div>
+              <div class="col-md-3">
+                <label for="inputEmail" class="form-label">Email</label>
+                <input type="email" class="form-control" id="inputEmail" required />
+              </div>
+             <div class="col-md-3">
+                <label for="inputPassword" class="form-label">Password</label>
+                <div class="input-group">
+                <input type="password" class="form-control" id="inputPassword" required />
+                <button class="btn btn-outline-secondary" type="button" onclick="togglePasswordVisibility()">
+      <i class="fas fa-eye" id="togglePasswordIcon"></i>
+    </button>
+  </div>
 </div>
-{% endblock %}
+
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button
+              type="button"
+              class="btn btn-secondary"
+              data-bs-dismiss="modal"
+              onclick="resetForm()"
+            >
+              <i class="fas fa-times me-1"></i> Cancel
+            </button>
+            <button type="submit" class="btn btn-success">
+              <i class="fas fa-check me-1"></i> Save
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- Bootstrap JS Bundle -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+
+  <script>
+    let users = [];
+    let editingUserId = null;
+    let currentPage = 1;
+    let currentSortField = "id";
+    let sortAscending = true;
+
+    const userModal = new bootstrap.Modal(document.getElementById("userModal"));
+    const idInput = document.getElementById("inputId");
+    const roleInput = document.getElementById("inputRole");
+    const usernameInput = document.getElementById("inputUsername");
+    const emailInput = document.getElementById("inputEmail");
+    const passwordInput = document.getElementById("inputPassword");
+    const userFormLabel = document.getElementById("userModalLabel");
+    const idFeedback = document.getElementById("idFeedback");
+
+    function openAddUserModal() {
+      resetForm();
+      editingUserId = null;
+      userFormLabel.innerText = "Add User";
+      idInput.disabled = false;
+      idInput.classList.remove("is-invalid");
+      idFeedback.innerText = "";
+      userModal.show();
+    }
+
+    function resetForm() {
+      document.getElementById("userForm").reset();
+      idInput.classList.remove("is-invalid");
+      idFeedback.innerText = "";
+      passwordInput.value = "";
+      editingUserId = null;
+    }
+
+    function addOrUpdateUser() {
+      let idValue = idInput.value.trim();
+      const role = roleInput.value.trim();
+      const username = usernameInput.value.trim();
+      const email = emailInput.value.trim();
+      const password = passwordInput.value.trim();
+
+      if (!idValue || !username || !email || !password) return;
+
+      const id = Number(idValue);
+      if (Number.isNaN(id) || id <= 0) {
+        setInvalid("User ID must be a positive number.");
+        return;
+      }
+
+      if (
+        (editingUserId === null && users.some(u => u.id === id)) ||
+        (editingUserId !== null && id !== editingUserId && users.some(u => u.id === id))
+      ) {
+        setInvalid("User ID already exists.");
+        return;
+      }
+
+      clearInvalid();
+
+      if (editingUserId !== null) {
+        users = users.map(u =>
+          u.id === editingUserId ? { id, role, username, email, password } : u
+        );
+        showAlert("User updated successfully.", "success");
+      } else {
+        users.push({ id, role, username, email, password });
+        showAlert("User added successfully.", "success");
+      }
+
+      sortUsers();
+      editingUserId = null;
+      userModal.hide();
+      renderTable();
+    }
+
+    function setInvalid(message) {
+      idInput.classList.add("is-invalid");
+      idFeedback.innerText = message;
+    }
+
+    function clearInvalid() {
+      idInput.classList.remove("is-invalid");
+      idFeedback.innerText = "";
+    }
+
+    function editUser(index) {
+      const user = getPaginatedUsers()[index];
+      editingUserId = user.id;
+      userFormLabel.innerText = "Edit User";
+
+      idInput.value = user.id;
+      roleInput.value = user.role;
+      usernameInput.value = user.username;
+      emailInput.value = user.email;
+      passwordInput.value = user.password || "";
+
+      idInput.disabled = true;
+      clearInvalid();
+      userModal.show();
+    }
+
+    function deleteUser(index) {
+      const user = getPaginatedUsers()[index];
+      if (confirm(`Delete user "${user.username}" (ID: ${user.id})?`)) {
+        users = users.filter(u => u.id !== user.id);
+        showAlert("User deleted successfully.", "danger");
+        renderTable();
+      }
+    }
+
+    function filteredUsers() {
+      const search = document.getElementById("searchInput").value.toLowerCase();
+      if (!search) return users;
+      return users.filter(u =>
+        String(u.id).includes(search) ||
+        u.role.toLowerCase().includes(search) ||
+        u.username.toLowerCase().includes(search) ||
+        u.email.toLowerCase().includes(search)
+      );
+    }
+
+    function sortUsers() {
+      users.sort((a, b) => {
+        let fieldA = a[currentSortField];
+        let fieldB = b[currentSortField];
+        if (currentSortField === "id") return sortAscending ? fieldA - fieldB : fieldB - fieldA;
+        fieldA = fieldA.toLowerCase(); fieldB = fieldB.toLowerCase();
+        return sortAscending ? fieldA.localeCompare(fieldB) : fieldB.localeCompare(fieldA);
+      });
+    }
+
+    function renderTable() {
+      const tableBody = document.getElementById("userTableBody");
+      tableBody.innerHTML = "";
+      const entries = parseInt(document.getElementById("entriesSelect").value);
+      const data = filteredUsers();
+      const totalPages = Math.ceil(data.length / entries);
+      currentPage = Math.min(currentPage, totalPages) || 1;
+      const start = (currentPage - 1) * entries;
+      const end = start + entries;
+      const pageUsers = data.slice(start, end);
+
+      pageUsers.forEach((user, index) => {
+        const row = document.createElement("tr");
+        row.innerHTML = `
+          <td>${user.id}</td>
+          <td>${capitalize(user.role)}</td>
+          <td>${escapeHtml(user.username)}</td>
+          <td>${escapeHtml(user.email)}</td>
+          <td>
+            <button class="btn btn-sm btn-warning me-1" onclick="editUser(${index})" title="Edit">
+              <i class="fas fa-edit"></i>
+            </button>
+            <button class="btn btn-sm btn-danger" onclick="deleteUser(${index})" title="Delete">
+              <i class="fas fa-trash"></i>
+            </button>
+          </td>
+        `;
+        tableBody.appendChild(row);
+      });
+
+      renderPagination(totalPages);
+      updateSortIcons();
+    }
+
+    function renderPagination(totalPages) {
+      const pagination = document.getElementById("pagination");
+      pagination.innerHTML = "";
+
+      pagination.insertAdjacentHTML(
+        "beforeend",
+        `<li class="page-item ${currentPage === 1 ? "disabled" : ""}">
+          <a class="page-link" href="#" onclick="changePage(${currentPage - 1})">&laquo;</a>
+        </li>`
+      );
+
+      let startPage = Math.max(1, currentPage - 3);
+      let endPage = Math.min(totalPages, startPage + 6);
+      if (endPage - startPage < 6) startPage = Math.max(1, endPage - 6);
+
+      for (let i = startPage; i <= endPage; i++) {
+        pagination.insertAdjacentHTML(
+          "beforeend",
+          `<li class="page-item ${i === currentPage ? "active" : ""}">
+            <a class="page-link" href="#" onclick="changePage(${i})">${i}</a>
+          </li>`
+        );
+      }
+
+      pagination.insertAdjacentHTML(
+        "beforeend",
+        `<li class="page-item ${currentPage === totalPages ? "disabled" : ""}">
+          <a class="page-link" href="#" onclick="changePage(${currentPage + 1})">&raquo;</a>
+        </li>`
+      );
+    }
+
+    function changePage(page) {
+      const entries = parseInt(document.getElementById("entriesSelect").value);
+      const totalPages = Math.ceil(filteredUsers().length / entries);
+      if (page < 1 || page > totalPages) return;
+      currentPage = page;
+      renderTable();
+    }
+
+    function getPaginatedUsers() {
+      const entries = parseInt(document.getElementById("entriesSelect").value);
+      const data = filteredUsers();
+      const start = (currentPage - 1) * entries;
+      const end = start + entries;
+      return data.slice(start, end);
+    }
+
+    function capitalize(str) {
+      return str.charAt(0).toUpperCase() + str.slice(1);
+    }
+
+    function escapeHtml(text) {
+      const map = {
+        "&": "&amp;",
+        "<": "&lt;",
+        ">": "&gt;",
+        '"': "&quot;",
+        "'": "&#039;",
+      };
+      return text.replace(/[&<>"']/g, m => map[m]);
+    }
+
+    function showAlert(message, type = "success") {
+      const alertContainer = document.getElementById("alertContainer");
+      const alertId = "alert" + Date.now();
+
+      const alertDiv = document.createElement("div");
+      alertDiv.className = `alert alert-${type} alert-dismissible fade show`;
+      alertDiv.id = alertId;
+      alertDiv.setAttribute("role", "alert");
+      alertDiv.innerHTML = `
+        <strong>${message}</strong>
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+      `;
+
+      alertContainer.appendChild(alertDiv);
+      setTimeout(() => {
+        const bsAlert = bootstrap.Alert.getOrCreateInstance(alertDiv);
+        bsAlert.close();
+      }, 3500);
+    }
+
+    function sortBy(field) {
+      if (currentSortField === field) {
+        sortAscending = !sortAscending;
+      } else {
+        currentSortField = field;
+        sortAscending = true;
+      }
+      sortUsers();
+      renderTable();
+    }
+
+    function updateSortIcons() {
+      const fields = ["id", "role", "username", "email"];
+      fields.forEach(field => {
+        const icon = document.getElementById("sortIcon" + capitalize(field));
+        if (field === currentSortField) {
+          icon.style.display = "inline";
+          icon.classList.toggle("fa-caret-up", sortAscending);
+          icon.classList.toggle("fa-caret-down", !sortAscending);
+        } else {
+          icon.style.display = "none";
+        }
+      });
+    }
+
+    // Initial table render
+    sortUsers();
+    renderTable();
+  </script>
+  <script>
+  function togglePasswordVisibility() {
+    const input = document.getElementById("inputPassword");
+    const icon = document.getElementById("togglePasswordIcon");
+    const isPassword = input.type === "password";
+    input.type = isPassword ? "text" : "password";
+    icon.classList.toggle("fa-eye", !isPassword);
+    icon.classList.toggle("fa-eye-slash", isPassword);
+  }
+</script>
+
+</body>
+</html>

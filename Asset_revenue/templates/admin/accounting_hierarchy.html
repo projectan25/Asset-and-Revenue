@@ -1,0 +1,560 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Accounting Hierarchy Management</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        .hierarchy-level {
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            padding: 15px;
+            margin-bottom: 20px;
+            background-color: #f9f9f9;
+        }
+        .hierarchy-title {
+            background-color: #e9ecef;
+            padding: 10px;
+            border-radius: 5px;
+            margin-bottom: 15px;
+            font-weight: bold;
+        }
+        .table-responsive {
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        .form-container {
+            background-color: white;
+            padding: 15px;
+            border-radius: 5px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container py-4">
+        <h1 class="text-center mb-4">Accounting Hierarchy Management</h1>
+        
+        <!-- Main Heading Section -->
+        <div class="hierarchy-level">
+            <div class="hierarchy-title">Main Headings</div>
+            <div class="form-container">
+                <form id="mainHeadingForm">
+                    <input type="hidden" id="mainHeadingId">
+                    <div class="row">
+                        <div class="col-md-8">
+                            <input type="text" class="form-control" id="mainHeadingName" placeholder="Enter main heading name" required>
+                        </div>
+                        <div class="col-md-4">
+                            <button type="submit" class="btn btn-primary me-2">Save</button>
+                            <button type="button" class="btn btn-secondary" onclick="resetMainHeadingForm()">Cancel</button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="table-responsive">
+                <table class="table table-striped table-hover">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Name</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="mainHeadingTable">
+                        <!-- Data will be loaded here -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        
+        <!-- Major Head Section -->
+        <div class="hierarchy-level">
+            <div class="hierarchy-title">Major Heads</div>
+            <div class="form-container">
+                <form id="majorHeadForm">
+                    <input type="hidden" id="majorHeadId">
+                    <div class="row">
+                        <div class="col-md-4">
+                            <select class="form-select" id="majorHeadMainHeading" required>
+                                <option value="">Select Main Heading</option>
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <input type="text" class="form-control" id="majorHeadName" placeholder="Enter major head name" required>
+                        </div>
+                        <div class="col-md-4">
+                            <button type="submit" class="btn btn-primary me-2">Save</button>
+                            <button type="button" class="btn btn-secondary" onclick="resetMajorHeadForm()">Cancel</button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="table-responsive">
+                <table class="table table-striped table-hover">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Main Heading</th>
+                            <th>Name</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="majorHeadTable">
+                        <!-- Data will be loaded here -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        
+        <!-- Sub Head Section -->
+        <div class="hierarchy-level">
+            <div class="hierarchy-title">Sub Heads</div>
+            <div class="form-container">
+                <form id="subHeadForm">
+                    <input type="hidden" id="subHeadId">
+                    <div class="row">
+                        <div class="col-md-4">
+                            <select class="form-select" id="subHeadMajorHead" required>
+                                <option value="">Select Major Head</option>
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <input type="text" class="form-control" id="subHeadName" placeholder="Enter sub head name" required>
+                        </div>
+                        <div class="col-md-4">
+                            <button type="submit" class="btn btn-primary me-2">Save</button>
+                            <button type="button" class="btn btn-secondary" onclick="resetSubHeadForm()">Cancel</button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="table-responsive">
+                <table class="table table-striped table-hover">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Major Head</th>
+                            <th>Name</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="subHeadTable">
+                        <!-- Data will be loaded here -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        
+        <!-- Sub Ledger Section -->
+        <div class="hierarchy-level">
+            <div class="hierarchy-title">Sub Ledgers</div>
+            <div class="form-container">
+                <form id="subLedgerForm">
+                    <input type="hidden" id="subLedgerId">
+                    <div class="row">
+                        <div class="col-md-4">
+                            <select class="form-select" id="subLedgerSubHead" required>
+                                <option value="">Select Sub Head</option>
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <input type="text" class="form-control" id="subLedgerName" placeholder="Enter sub ledger name" required>
+                        </div>
+                        <div class="col-md-4">
+                            <button type="submit" class="btn btn-primary me-2">Save</button>
+                            <button type="button" class="btn btn-secondary" onclick="resetSubLedgerForm()">Cancel</button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="table-responsive">
+                <table class="table table-striped table-hover">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Sub Head</th>
+                            <th>Name</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="subLedgerTable">
+                        <!-- Data will be loaded here -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Base API URL
+        const API_BASE = '/api/accounting';
+        
+        // DOM Ready
+        document.addEventListener('DOMContentLoaded', function() {
+            loadAllData();
+            
+            // Form submit handlers
+            document.getElementById('mainHeadingForm').addEventListener('submit', handleMainHeadingSubmit);
+            document.getElementById('majorHeadForm').addEventListener('submit', handleMajorHeadSubmit);
+            document.getElementById('subHeadForm').addEventListener('submit', handleSubHeadSubmit);
+            document.getElementById('subLedgerForm').addEventListener('submit', handleSubLedgerSubmit);
+        });
+        
+        // Load all data
+        async function loadAllData() {
+            await loadMainHeadings();
+            await loadMajorHeads();
+            await loadSubHeads();
+            await loadSubLedgers();
+            
+            // Populate dropdowns
+            populateMainHeadingDropdown();
+            populateMajorHeadDropdown();
+            populateSubHeadDropdown();
+        }
+        
+        // Main Heading Functions
+        async function loadMainHeadings() {
+            const response = await fetch(`${API_BASE}/main_headings`);
+            const data = await response.json();
+            const table = document.getElementById('mainHeadingTable');
+            table.innerHTML = '';
+            
+            data.forEach(item => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${item.id}</td>
+                    <td>${item.name}</td>
+                    <td>
+                        <button class="btn btn-sm btn-warning me-2" onclick="editMainHeading(${item.id}, '${item.name}')">Edit</button>
+                        <button class="btn btn-sm btn-danger" onclick="deleteMainHeading(${item.id})">Delete</button>
+                    </td>
+                `;
+                table.appendChild(row);
+            });
+        }
+        
+        function populateMainHeadingDropdown() {
+            const dropdown = document.getElementById('majorHeadMainHeading');
+            dropdown.innerHTML = '<option value="">Select Main Heading</option>';
+            
+            fetch(`${API_BASE}/main_headings`)
+                .then(response => response.json())
+                .then(data => {
+                    data.forEach(item => {
+                        const option = document.createElement('option');
+                        option.value = item.id;
+                        option.textContent = item.name;
+                        dropdown.appendChild(option);
+                    });
+                });
+        }
+        
+        async function handleMainHeadingSubmit(e) {
+            e.preventDefault();
+            const id = document.getElementById('mainHeadingId').value;
+            const name = document.getElementById('mainHeadingName').value;
+            
+            const url = id ? `${API_BASE}/main_headings/${id}` : `${API_BASE}/main_headings`;
+            const method = id ? 'PUT' : 'POST';
+            
+            const response = await fetch(url, {
+                method: method,
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ name })
+            });
+            
+            if (response.ok) {
+                resetMainHeadingForm();
+                loadAllData();
+            }
+        }
+        
+        function editMainHeading(id, name) {
+            document.getElementById('mainHeadingId').value = id;
+            document.getElementById('mainHeadingName').value = name;
+            document.getElementById('mainHeadingName').focus();
+        }
+        
+        async function deleteMainHeading(id) {
+            if (confirm('Are you sure you want to delete this main heading? This will delete all associated records.')) {
+                const response = await fetch(`${API_BASE}/main_headings/${id}`, {
+                    method: 'DELETE'
+                });
+                
+                if (response.ok) {
+                    loadAllData();
+                }
+            }
+        }
+        
+        function resetMainHeadingForm() {
+            document.getElementById('mainHeadingForm').reset();
+            document.getElementById('mainHeadingId').value = '';
+        }
+        
+        // Major Head Functions
+        async function loadMajorHeads() {
+            const response = await fetch(`${API_BASE}/major_heads`);
+            const data = await response.json();
+            const table = document.getElementById('majorHeadTable');
+            table.innerHTML = '';
+            
+            // Get main headings for name lookup
+            const mainHeadingsResponse = await fetch(`${API_BASE}/main_headings`);
+            const mainHeadings = await mainHeadingsResponse.json();
+            const mainHeadingMap = {};
+            mainHeadings.forEach(h => mainHeadingMap[h.id] = h.name);
+            
+            data.forEach(item => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${item.id}</td>
+                    <td>${mainHeadingMap[item.main_heading_id] || 'N/A'}</td>
+                    <td>${item.name}</td>
+                    <td>
+                        <button class="btn btn-sm btn-warning me-2" onclick="editMajorHead(${item.id}, ${item.main_heading_id}, '${item.name}')">Edit</button>
+                        <button class="btn btn-sm btn-danger" onclick="deleteMajorHead(${item.id})">Delete</button>
+                    </td>
+                `;
+                table.appendChild(row);
+            });
+        }
+        
+        function populateMajorHeadDropdown() {
+            const dropdown = document.getElementById('subHeadMajorHead');
+            dropdown.innerHTML = '<option value="">Select Major Head</option>';
+            
+            fetch(`${API_BASE}/major_heads`)
+                .then(response => response.json())
+                .then(data => {
+                    data.forEach(item => {
+                        const option = document.createElement('option');
+                        option.value = item.id;
+                        option.textContent = item.name;
+                        dropdown.appendChild(option);
+                    });
+                });
+        }
+        
+        async function handleMajorHeadSubmit(e) {
+            e.preventDefault();
+            const id = document.getElementById('majorHeadId').value;
+            const mainHeadingId = document.getElementById('majorHeadMainHeading').value;
+            const name = document.getElementById('majorHeadName').value;
+            
+            const url = id ? `${API_BASE}/major_heads/${id}` : `${API_BASE}/major_heads`;
+            const method = id ? 'PUT' : 'POST';
+            
+            const response = await fetch(url, {
+                method: method,
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ name, main_heading_id: mainHeadingId })
+            });
+            
+            if (response.ok) {
+                resetMajorHeadForm();
+                loadAllData();
+            }
+        }
+        
+        function editMajorHead(id, mainHeadingId, name) {
+            document.getElementById('majorHeadId').value = id;
+            document.getElementById('majorHeadMainHeading').value = mainHeadingId;
+            document.getElementById('majorHeadName').value = name;
+            document.getElementById('majorHeadName').focus();
+        }
+        
+        async function deleteMajorHead(id) {
+            if (confirm('Are you sure you want to delete this major head? This will delete all associated records.')) {
+                const response = await fetch(`${API_BASE}/major_heads/${id}`, {
+                    method: 'DELETE'
+                });
+                
+                if (response.ok) {
+                    loadAllData();
+                }
+            }
+        }
+        
+        function resetMajorHeadForm() {
+            document.getElementById('majorHeadForm').reset();
+            document.getElementById('majorHeadId').value = '';
+        }
+        
+        // Sub Head Functions
+        async function loadSubHeads() {
+            const response = await fetch(`${API_BASE}/sub_heads`);
+            const data = await response.json();
+            const table = document.getElementById('subHeadTable');
+            table.innerHTML = '';
+            
+            // Get major heads for name lookup
+            const majorHeadsResponse = await fetch(`${API_BASE}/major_heads`);
+            const majorHeads = await majorHeadsResponse.json();
+            const majorHeadMap = {};
+            majorHeads.forEach(h => majorHeadMap[h.id] = h.name);
+            
+            data.forEach(item => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${item.id}</td>
+                    <td>${majorHeadMap[item.major_head_id] || 'N/A'}</td>
+                    <td>${item.name}</td>
+                    <td>
+                        <button class="btn btn-sm btn-warning me-2" onclick="editSubHead(${item.id}, ${item.major_head_id}, '${item.name}')">Edit</button>
+                        <button class="btn btn-sm btn-danger" onclick="deleteSubHead(${item.id})">Delete</button>
+                    </td>
+                `;
+                table.appendChild(row);
+            });
+        }
+        
+        function populateSubHeadDropdown() {
+            const dropdown = document.getElementById('subLedgerSubHead');
+            dropdown.innerHTML = '<option value="">Select Sub Head</option>';
+            
+            fetch(`${API_BASE}/sub_heads`)
+                .then(response => response.json())
+                .then(data => {
+                    data.forEach(item => {
+                        const option = document.createElement('option');
+                        option.value = item.id;
+                        option.textContent = item.name;
+                        dropdown.appendChild(option);
+                    });
+                });
+        }
+        
+        async function handleSubHeadSubmit(e) {
+            e.preventDefault();
+            const id = document.getElementById('subHeadId').value;
+            const majorHeadId = document.getElementById('subHeadMajorHead').value;
+            const name = document.getElementById('subHeadName').value;
+            
+            const url = id ? `${API_BASE}/sub_heads/${id}` : `${API_BASE}/sub_heads`;
+            const method = id ? 'PUT' : 'POST';
+            
+            const response = await fetch(url, {
+                method: method,
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ name, major_head_id: majorHeadId })
+            });
+            
+            if (response.ok) {
+                resetSubHeadForm();
+                loadAllData();
+            }
+        }
+        
+        function editSubHead(id, majorHeadId, name) {
+            document.getElementById('subHeadId').value = id;
+            document.getElementById('subHeadMajorHead').value = majorHeadId;
+            document.getElementById('subHeadName').value = name;
+            document.getElementById('subHeadName').focus();
+        }
+        
+        async function deleteSubHead(id) {
+            if (confirm('Are you sure you want to delete this sub head? This will delete all associated records.')) {
+                const response = await fetch(`${API_BASE}/sub_heads/${id}`, {
+                    method: 'DELETE'
+                });
+                
+                if (response.ok) {
+                    loadAllData();
+                }
+            }
+        }
+        
+        function resetSubHeadForm() {
+            document.getElementById('subHeadForm').reset();
+            document.getElementById('subHeadId').value = '';
+        }
+        
+        // Sub Ledger Functions
+        async function loadSubLedgers() {
+            const response = await fetch(`${API_BASE}/sub_ledgers`);
+            const data = await response.json();
+            const table = document.getElementById('subLedgerTable');
+            table.innerHTML = '';
+            
+            // Get sub heads for name lookup
+            const subHeadsResponse = await fetch(`${API_BASE}/sub_heads`);
+            const subHeads = await subHeadsResponse.json();
+            const subHeadMap = {};
+            subHeads.forEach(h => subHeadMap[h.id] = h.name);
+            
+            data.forEach(item => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${item.id}</td>
+                    <td>${subHeadMap[item.sub_head_id] || 'N/A'}</td>
+                    <td>${item.name}</td>
+                    <td>
+                        <button class="btn btn-sm btn-warning me-2" onclick="editSubLedger(${item.id}, ${item.sub_head_id}, '${item.name}')">Edit</button>
+                        <button class="btn btn-sm btn-danger" onclick="deleteSubLedger(${item.id})">Delete</button>
+                    </td>
+                `;
+                table.appendChild(row);
+            });
+        }
+        
+        async function handleSubLedgerSubmit(e) {
+            e.preventDefault();
+            const id = document.getElementById('subLedgerId').value;
+            const subHeadId = document.getElementById('subLedgerSubHead').value;
+            const name = document.getElementById('subLedgerName').value;
+            
+            const url = id ? `${API_BASE}/sub_ledgers/${id}` : `${API_BASE}/sub_ledgers`;
+            const method = id ? 'PUT' : 'POST';
+            
+            const response = await fetch(url, {
+                method: method,
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ name, sub_head_id: subHeadId })
+            });
+            
+            if (response.ok) {
+                resetSubLedgerForm();
+                loadAllData();
+            }
+        }
+        
+        function editSubLedger(id, subHeadId, name) {
+            document.getElementById('subLedgerId').value = id;
+            document.getElementById('subLedgerSubHead').value = subHeadId;
+            document.getElementById('subLedgerName').value = name;
+            document.getElementById('subLedgerName').focus();
+        }
+        
+        async function deleteSubLedger(id) {
+            if (confirm('Are you sure you want to delete this sub ledger?')) {
+                const response = await fetch(`${API_BASE}/sub_ledgers/${id}`, {
+                    method: 'DELETE'
+                });
+                
+                if (response.ok) {
+                    loadAllData();
+                }
+            }
+        }
+        
+        function resetSubLedgerForm() {
+            document.getElementById('subLedgerForm').reset();
+            document.getElementById('subLedgerId').value = '';
+        }
+    </script>
+</body>
+</html>
