@@ -1,532 +1,1020 @@
+{% extends "admin/base.html" %}
+{% block content %}
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <title>ERP User Management</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="csrf-token" content="{{ csrf_token() }}">
+    <title>User Management</title>
+    <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- DataTables CSS -->
+    <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/dataTables.bootstrap5.min.css">
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary-color: #4361ee;
+            --secondary-color: #3f37c9;
+            --accent-color: #4895ef;
+            --light-color: #f8f9ff;
+            --dark-color: #212529;
+            --success-color: #4cc9f0;
+            --danger-color: #f72585;
+            --warning-color: #f8961e;
+            --info-color: #4895ef;
+        }
 
-  <!-- Bootstrap 5 CSS -->
-  <link
-    href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
-    rel="stylesheet"
-  />
 
-  <!-- Font Awesome -->
-  <link
-    rel="stylesheet"
-    href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"
-  />
-
-  <style>
-    body {
-      background-color: #f4f6f9;
-      font-family: "Segoe UI", sans-serif;
+        .select2-container--default .select2-selection--single {
+        height: 38px;
+        border: 1px solid #ced4da;
+        border-radius: 6px;
+        padding: 0.375rem 0.75rem;
+    }
+    .select2-container--default .select2-selection--single .select2-selection__arrow {
+        height: 36px;
+    }
+    .select2-container--default .select2-selection--single .select2-selection__rendered {
+        line-height: 36px;
+    }
+    .select2-container--default .select2-search--dropdown .select2-search__field {
+        border: 1px solid #ced4da;
+        border-radius: 6px;
+    }
+    .select2-dropdown {
+        border: 1px solid #ced4da;
+        border-radius: 6px;
     }
 
-    .card {
-      border: none;
-      box-shadow: 0 0.75rem 1.5rem rgba(0, 0, 0, 0.05);
-    }
 
-    .table th {
-      background-color: #0d6efd;
-      color: white;
-    }
+        body {
+            font-family: 'Poppins', sans-serif;
+            background-color: #f5f7fa;
+            color: var(--dark-color);
+            line-height: 1.6;
+        }
+        
+        .page-header {
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+            color: white;
+            padding: 2rem 0;
+            margin-bottom: 2rem;
+            border-radius: 0 0 10px 10px;
+            box-shadow: 0 4px 20px rgba(67, 97, 238, 0.15);
+        }
+        
+        .page-title {
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+        }
+        
+        .breadcrumb {
+            background-color: transparent;
+            padding: 0;
+            margin-bottom: 0;
+        }
+        
+        .breadcrumb-item a {
+            color: rgba(255, 255, 255, 0.8);
+            text-decoration: none;
+            transition: all 0.3s;
+        }
+        
+        .breadcrumb-item a:hover {
+            color: white;
+            text-decoration: underline;
+        }
+        
+        .breadcrumb-item.active {
+            color: white;
+        }
+        
+        .card {
+            border: none;
+            border-radius: 10px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.05);
+            margin-bottom: 2rem;
+            overflow: hidden;
+            transition: transform 0.3s, box-shadow 0.3s;
+        }
+        
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+        }
+        
+        .card-header {
+            background-color: white;
+            border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+            padding: 1.25rem 1.5rem;
+            font-weight: 600;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .table-responsive {
+            border-radius: 10px;
+            overflow: hidden;
+        }
+        
+        .table {
+            margin-bottom: 0;
+            border-collapse: separate;
+            border-spacing: 0;
+        }
+        
+        .table thead th {
+            background-color: var(--light-color);
+            border-bottom: 2px solid rgba(0, 0, 0, 0.05);
+            font-weight: 600;
+            padding: 1rem 1.25rem;
+            color: var(--dark-color);
+            text-transform: uppercase;
+            font-size: 0.75rem;
+            letter-spacing: 0.5px;
+        }
+        
+        .table tbody td {
+            padding: 1rem 1.25rem;
+            vertical-align: middle;
+            border-top: 1px solid rgba(0, 0, 0, 0.03);
+        }
+        
+        .table tbody tr:last-child td {
+            border-bottom: none;
+        }
+        
+        .table tbody tr:hover {
+            background-color: rgba(67, 97, 238, 0.03);
+        }
+        
+        .btn-primary {
+            background-color: var(--primary-color);
+            border-color: var(--primary-color);
+            font-weight: 500;
+            letter-spacing: 0.5px;
+            padding: 0.5rem 1.25rem;
+            transition: all 0.3s;
+        }
+        
+        .btn-primary:hover {
+            background-color: var(--secondary-color);
+            border-color: var(--secondary-color);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 10px rgba(67, 97, 238, 0.3);
+        }
+        
+        .btn-outline-danger {
+            color: var(--danger-color);
+            border-color: var(--danger-color);
+            transition: all 0.3s;
+        }
+        
+        .btn-outline-danger:hover {
+            background-color: var(--danger-color);
+            color: white;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 10px rgba(247, 37, 133, 0.2);
+        }
+        
+        .btn-outline-primary {
+            color: var(--primary-color);
+            border-color: var(--primary-color);
+            transition: all 0.3s;
+        }
+        
+        .btn-outline-primary:hover {
+            background-color: var(--primary-color);
+            color: white;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 10px rgba(67, 97, 238, 0.2);
+        }
+        
+        .badge-count {
+            background-color: var(--accent-color);
+            font-size: 0.7rem;
+            font-weight: 500;
+            padding: 0.35rem 0.6rem;
+            border-radius: 50px;
+        }
+        
+        .form-control, .form-select {
+            border-radius: 6px;
+            border: 1px solid rgba(0, 0, 0, 0.1);
+            transition: all 0.3s;
+        }
+        
+        .form-control:focus, .form-select:focus {
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 0.25rem rgba(67, 97, 238, 0.15);
+        }
+        
+        .action-btns .btn {
+            padding: 0.4rem 0.75rem;
+            font-size: 0.85rem;
+            margin-right: 0.5rem;
+            border-radius: 6px;
+        }
+        
+        .alert {
+            border-radius: 8px;
+            border: none;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
+        }
+        
+        .modal-content {
+            border: none;
+            border-radius: 12px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+        }
+        
+        .modal-header {
+            border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+            padding: 1.25rem 1.5rem;
+        }
+        
+        .modal-footer {
+            border-top: 1px solid rgba(0, 0, 0, 0.05);
+            padding: 1rem 1.5rem;
+        }
+        
+        .status-badge {
+            padding: 0.4rem 0.8rem;
+            border-radius: 50px;
+            font-size: 0.75rem;
+            font-weight: 500;
+            display: inline-block;
+            min-width: 80px;
+            text-align: center;
+        }
+        
+        .status-active {
+            background-color: rgba(40, 167, 69, 0.1);
+            color: #28a745;
+        }
+        
+        .status-inactive {
+            background-color: rgba(220, 53, 69, 0.1);
+            color: #dc3545;
+        }
+        
+        .search-box {
+            position: relative;
+            width: 250px;
+        }
+        
+        .search-box input {
+            padding-left: 2.5rem;
+            border-radius: 50px;
+            background-color: rgba(255, 255, 255, 0.9);
+        }
+        
+        .search-box .search-icon {
+            position: absolute;
+            left: 1rem;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--primary-color);
+            z-index: 10;
+        }
+        
+        .empty-state {
+            padding: 3rem 0;
+            text-align: center;
+            color: #6c757d;
+        }
+        
+        .empty-state i {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+            color: #dee2e6;
+        }
+        
+        .empty-state h5 {
+            font-weight: 500;
+            margin-bottom: 0.5rem;
+        }
+        
+        .empty-state p {
+            color: #adb5bd;
+        }
+        
+        .spinner-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 200px;
+        }
+        
+        .admin-badge {
+            background-color: rgba(220, 53, 69, 0.1);
+            color: #dc3545;
+        }
 
-    .control-panel {
-      display: flex;
-      flex-wrap: wrap;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 1rem;
-    }
+        .pagination {
+        margin: 0;
+        }
+        
+        .user-badge {
+            background-color: rgba(13, 110, 253, 0.1);
+            color: #0d6efd;
+        }
+        
+        .page-item.disabled .page-link {
+            color: #6c757d;
+            pointer-events: none;
+            background-color: #fff;
+            border-color: #dee2e6;
+        }
 
-    .dataTables-controls {
-      display: flex;
-      gap: 1rem;
-      align-items: center;
-      flex-wrap: wrap;
-    }
+        .page-item.active .page-link {
+            background-color: var(--primary-color);
+            border-color: var(--primary-color);
+        }
 
-    .dataTables-controls select,
-    .dataTables-controls input {
-      max-width: 120px;
-    }
+        .page-link {
+            color: var(--primary-color);
+            padding: 0.5rem 0.75rem;
+            margin: 0 2px;
+            border-radius: 4px;
+        }
 
-    .pagination {
-      margin: 0;
-    }
-
-    .pagination .page-item .page-link {
-      color: #0d6efd;
-      cursor: pointer;
-    }
-
-    .pagination .page-item.active .page-link {
-      background-color: #0d6efd;
-      border-color: #0d6efd;
-      color: white;
-      cursor: default;
-    }
-
-    #alertContainer {
-      position: fixed;
-      top: 1rem;
-      right: 1rem;
-      z-index: 1055;
-      min-width: 300px;
-    }
-
-    th.sortable {
-      cursor: pointer;
-      user-select: none;
-    }
-
-    th.sortable .fa-caret-down,
-    th.sortable .fa-caret-up {
-      margin-left: 5px;
-      font-size: 0.75rem;
-      color: #fff;
-      opacity: 0.75;
-    }
-  </style>
+        .page-link:hover {
+            color: var(--secondary-color);
+            background-color: #e9ecef;
+            border-color: #dee2e6;
+        }
+    </style>
 </head>
 <body>
-  <div class="container py-5">
-    <div class="d-flex justify-content-between align-items-center mb-4">
-      <h2 class="mb-0">User Management</h2>
-      <button
-        class="btn btn-primary"
-        data-bs-toggle="modal"
-        data-bs-target="#userModal"
-        onclick="openAddUserModal()"
-      >
-        <i class="fas fa-user-plus me-1"></i> Create User
-      </button>
-    </div>
-
-    <div id="alertContainer"></div>
-
-    <div class="control-panel mb-2">
-      <div class="dataTables-controls">
-        <label class="form-label mb-0 me-2">
-          Show
-          <select
-            class="form-select d-inline-block w-auto"
-            id="entriesSelect"
-            onchange="changePage(1); renderTable()"
-          >
-            <option value="5">5</option>
-            <option value="10" selected>10</option>
-            <option value="15">15</option>
-          </select>
-          entries
-        </label>
-
-        <label class="form-label mb-0">
-          Search
-          <input
-            type="text"
-            class="form-control d-inline-block w-auto"
-            id="searchInput"
-            oninput="changePage(1); renderTable()"
-            placeholder="Search users..."
-          />
-        </label>
-      </div>
-
-      <ul class="pagination pagination-sm" id="pagination"></ul>
-    </div>
-
-    <div class="card">
-      <div class="table-responsive">
-        <table class="table table-hover mb-0">
-          <thead>
-            <tr>
-              <th class="sortable" onclick="sortBy('id')">
-                ID <i id="sortIconId" class="fas fa-caret-down"></i>
-              </th>
-              <th class="sortable" onclick="sortBy('role')">
-                Role <i id="sortIconRole" class="fas fa-caret-down" style="display:none"></i>
-              </th>
-              <th class="sortable" onclick="sortBy('username')">
-                Username <i id="sortIconUsername" class="fas fa-caret-down" style="display:none"></i>
-              </th>
-              <th class="sortable" onclick="sortBy('email')">
-                Email <i id="sortIconEmail" class="fas fa-caret-down" style="display:none"></i>
-              </th>
-              <th>Actions</th>
-            </tr>
-          </thead>
-          <tbody id="userTableBody"></tbody>
-        </table>
-      </div>
-    </div>
-  </div>
-
-  <!-- User Modal -->
-  <div
-    class="modal fade"
-    id="userModal"
-    tabindex="-1"
-    aria-labelledby="userModalLabel"
-    aria-hidden="true"
-  >
-    <div class="modal-dialog modal-lg modal-dialog-centered">
-      <div class="modal-content">
-        <form id="userForm" onsubmit="event.preventDefault(); addOrUpdateUser()">
-          <div class="modal-header">
-            <h5 class="modal-title" id="userModalLabel">Add User</h5>
-            <button
-              type="button"
-              class="btn-close"
-              data-bs-dismiss="modal"
-              aria-label="Close"
-              onclick="resetForm()"
-            ></button>
-          </div>
-          <div class="modal-body">
-            <div class="row g-3">
-              <div class="col-md-3">
-                <label for="inputId" class="form-label">User ID</label>
-                <input type="number" class="form-control" id="inputId" min="1" required />
-                <div class="invalid-feedback" id="idFeedback"></div>
-              </div>
-              <div class="col-md-3">
-                <label for="inputRole" class="form-label">Role</label>
-                <select class="form-select" id="inputRole" required>
-                  <option value="admin">Admin</option>
-                  <option value="staff">Staff</option>
-                </select>
-              </div>
-              <div class="col-md-3">
-                <label for="inputUsername" class="form-label">Username</label>
-                <input type="text" class="form-control" id="inputUsername" required />
-              </div>
-              <div class="col-md-3">
-                <label for="inputEmail" class="form-label">Email</label>
-                <input type="email" class="form-control" id="inputEmail" required />
-              </div>
-             <div class="col-md-3">
-                <label for="inputPassword" class="form-label">Password</label>
-                <div class="input-group">
-                <input type="password" class="form-control" id="inputPassword" required />
-                <button class="btn btn-outline-secondary" type="button" onclick="togglePasswordVisibility()">
-      <i class="fas fa-eye" id="togglePasswordIcon"></i>
-    </button>
-  </div>
-</div>
-
+    <div class="page-header">
+        <div class="container-fluid">
+            <div class="row align-items-center">
+                <div class="col-md-6">
+                    <h1 class="page-title"><i class="fas fa-users-cog me-2"></i>User Management</h1>
+                    <nav aria-label="breadcrumb">
+                        <ol class="breadcrumb">
+                            <li class="breadcrumb-item"><a href="/admin">Admin</a></li>
+                            <li class="breadcrumb-item active" aria-current="page">Users</li>
+                        </ol>
+                    </nav>
+                </div>
+                <div class="col-md-6 text-md-end">
+                <div class="btn-group me-2">
+                    <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addUserModal">
+                        <i class="fas fa-user-plus me-2"></i>Create User
+                    </button>
+                </div>
             </div>
-          </div>
-          <div class="modal-footer">
-            <button
-              type="button"
-              class="btn btn-secondary"
-              data-bs-dismiss="modal"
-              onclick="resetForm()"
-            >
-              <i class="fas fa-times me-1"></i> Cancel
-            </button>
-            <button type="submit" class="btn btn-success">
-              <i class="fas fa-check me-1"></i> Save
-            </button>
-          </div>
-        </form>
-      </div>
+            </div>
+        </div>
     </div>
-  </div>
 
-  <!-- Bootstrap JS Bundle -->
-  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <div class="container-fluid">
+        <!-- Flash Messages -->
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="alert alert-{{ category }} alert-dismissible fade show mb-4" role="alert">
+                        <i class="fas {% if category == 'success' %}fa-check-circle{% elif category == 'danger' %}fa-exclamation-circle{% else %}fa-info-circle{% endif %} me-2"></i>
+                        {{ message }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                    </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
 
-  <script>
-    let users = [];
-    let editingUserId = null;
-    let currentPage = 1;
-    let currentSortField = "id";
-    let sortAscending = true;
+        <div class="row">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header">
 
-    const userModal = new bootstrap.Modal(document.getElementById("userModal"));
-    const idInput = document.getElementById("inputId");
-    const roleInput = document.getElementById("inputRole");
-    const usernameInput = document.getElementById("inputUsername");
-    const emailInput = document.getElementById("inputEmail");
-    const passwordInput = document.getElementById("inputPassword");
-    const userFormLabel = document.getElementById("userModalLabel");
-    const idFeedback = document.getElementById("idFeedback");
+                        <h5 class="mb-0"><i class="fas fa-users me-2"></i>System Users</h5>
+                        <div class="d-flex align-items-center">
+                            <div class="btn-group">
+    <select class="form-select form-select-sm" id="perPageSelect">
+        <option value="10" {% if users.per_page == 10 %}selected{% endif %}>10 per page</option>
+        <option value="25" {% if users.per_page == 25 %}selected{% endif %}>25 per page</option>
+        <option value="50" {% if users.per_page == 50 %}selected{% endif %}>50 per page</option>
+    </select>
+    </div>
+                        <div class="search-box me-3">
+                            <i class="fas fa-search search-icon"></i>
+                            <form id="searchForm" method="GET" action="{{ url_for('admin.manage_users') }}">
+                                <input type="text" class="form-control form-control-sm" 
+                                    id="searchInput" name="search" placeholder="Search users..." 
+                                    value="{{ request.args.get('search', '') }}">
+                            </form>
+                        </div>
+                            <span class="badge badge-count">
+                                <i class="fas fa-users me-1"></i>
+                                {{ users.total }} total users
+                            </span>
+                        </div>
+                    </div>
+                    <div class="card-body p-0">
+                        <div class="table-responsive">
+                            <table id="usersTable" class="table table-hover" style="width:100%">
+                                <thead>
+                                    <tr>
+                                        <th>Username</th>
+                                        <th>Email</th>
+                                        <th>Department</th>
+                                        <th>Role</th>
+                                        <th>Status</th>
+                                        <th>Created</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for user in users.items %}
+                                    <tr>
+                                        <td>
+                                            <strong>{{ user.username }}</strong>
+                                            {% if user.is_global_admin %}
+                                            <i class="fas fa-star text-warning ms-1" title="Administrator"></i>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            <a href="mailto:{{ user.email }}" class="text-decoration-none">
+                                                <i class="fas fa-envelope me-1 text-muted"></i>
+                                                {{ user.email }}
+                                            </a>
+                                        </td>
+                                        <td>
+                                            {% if user.department %}
+                                            <span class="badge bg-info bg-opacity-10 text-info">
+                                                <i class="fas fa-building me-1"></i>
+                                                {{ user.department.depart_name }}
+                                            </span>
+                                            {% else %}
+                                            <span class="text-muted">None</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            <span class="status-badge {% if user.is_global_admin %}admin-badge{% else %}user-badge{% endif %}">
+                                                <i class="fas {% if user.is_global_admin %}fa-user-shield{% else %}fa-user{% endif %} me-1"></i>
+                                                {{ 'Admin' if user.is_global_admin else 'User' }}
+                                            </span>
+                                        </td>
+                                        <td>
+                                            <span class="status-badge {% if user.is_active %}status-active{% else %}status-inactive{% endif %}">
+                                                <i class="fas {% if user.is_active %}fa-check-circle{% else %}fa-times-circle{% endif %} me-1"></i>
+                                                {{ 'Active' if user.is_active else 'Inactive' }}
+                                            </span>
+                                        </td>
+                                        <td>
+                                            <small class="text-muted">
+                                                <i class="far fa-calendar-alt me-1"></i>
+                                                {{ user.created_at.strftime('%Y-%m-%d') if user.created_at else '-' }}
+                                            </small>
+                                        </td>
+                                        <td class="action-btns">
+                                            <button class="btn btn-sm btn-outline-primary edit-user" 
+                                                    data-user-id="{{ user.id }}"
+                                                    title="Edit User">
+                                                <i class="fas fa-edit"></i>
+                                            </button>
+                                        <button class="btn btn-sm btn-outline-warning view-password" 
+                                                data-user-id="{{ user.id }}"
+                                                title="Click to view password">
+                                            <i class="fas fa-eye"></i> Show Password
+                                        </button>
+                                            <button class="btn btn-sm btn-outline-success toggle-admin" 
+                                                    data-user-id="{{ user.id }}"
+                                                    data-is-admin="{{ 'true' if user.is_global_admin else 'false' }}"
+                                                    title="{{ 'Revoke Admin' if user.is_global_admin else 'Make Admin' }}">
+                                                <i class="fas {{ 'fa-user-times' if user.is_global_admin else 'fa-user-shield' }}"></i>
+                                            </button>
+                                            <button class="btn btn-sm btn-outline-danger delete-user" 
+                                                    data-user-id="{{ user.id }}"
+                                                    title="Delete User">
+                                                <i class="fas fa-trash-alt"></i>
+                                            </button>
+                                        </td>
+                                    </tr>
+                                    {% else %}
+                                    <tr>
+                                        <td colspan="7" class="empty-state">
+                                            <i class="fas fa-users-slash"></i>
+                                            <h5>No Users Found</h5>
+                                            <p>Create your first user using the button above</p>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    {% if users.pages > 1 %}
+                    <div class="card-footer bg-white">
 
-    function openAddUserModal() {
-      resetForm();
-      editingUserId = null;
-      userFormLabel.innerText = "Add User";
-      idInput.disabled = false;
-      idInput.classList.remove("is-invalid");
-      idFeedback.innerText = "";
-      userModal.show();
-    }
+                        <nav aria-label="User pagination">
+                            <ul class="pagination justify-content-center mb-0">
+                                <li class="page-item {% if not users.has_prev %}disabled{% endif %}">
+                                    <a class="page-link" href="{{ url_for('admin.manage_users', page=users.prev_num) }}" 
+                                    aria-label="Previous" {% if not users.has_prev %}tabindex="-1" aria-disabled="true"{% endif %}>
+                                        <span aria-hidden="true">&laquo; Previous</span>
+                                    </a>
+                                </li>
+                                
+                                {% for page_num in users.iter_pages(left_edge=1, right_edge=1, left_current=2, right_current=3) %}
+                                    {% if page_num %}
+                                        {% if users.page == page_num %}
+                                            <li class="page-item active" aria-current="page">
+                                                <span class="page-link">{{ page_num }}</span>
+                                            </li>
+                                        {% else %}
+                                            <li class="page-item">
+                                                <a class="page-link" href="{{ url_for('admin.manage_users', page=page_num) }}">{{ page_num }}</a>
+                                            </li>
+                                        {% endif %}
+                                    {% else %}
+                                        <li class="page-item disabled">
+                                            <span class="page-link">...</span>
+                                        </li>
+                                    {% endif %}
+                                {% endfor %}
+                                
+                                <li class="page-item {% if not users.has_next %}disabled{% endif %}">
+                                    <a class="page-link" href="{{ url_for('admin.manage_users', page=users.next_num) }}" 
+                                    aria-label="Next" {% if not users.has_next %}tabindex="-1" aria-disabled="true"{% endif %}>
+                                        <span aria-hidden="true">Next &raquo;</span>
+                                    </a>
+                                </li>
+                            </ul>
+                        </nav>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
 
-    function resetForm() {
-      document.getElementById("userForm").reset();
-      idInput.classList.remove("is-invalid");
-      idFeedback.innerText = "";
-      passwordInput.value = "";
-      editingUserId = null;
-    }
+    <!-- Add User Modal -->
+    <div class="modal fade" id="addUserModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title"><i class="fas fa-user-plus me-2"></i>Create New User</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+            <form id="addUserForm" method="POST" action="{{ url_for('admin.create_user') }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="username" class="form-label">Username</label>
+                        <div class="input-group">
+                            <span class="input-group-text"><i class="fas fa-user"></i></span>
+                            <input type="text" class="form-control" id="username" name="username" required>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label for="email" class="form-label">Email</label>
+                        <div class="input-group">
+                            <span class="input-group-text"><i class="fas fa-envelope"></i></span>
+                            <input type="email" class="form-control" id="email" name="email" required>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label for="password" class="form-label">Password</label>
+                        <div class="input-group">
+                            <span class="input-group-text"><i class="fas fa-lock"></i></span>
+                            <input type="password" class="form-control" id="password" name="password" required>
+                        </div>
+                        <small class="text-muted">Minimum 8 characters</small>
+                    </div>
+                    <div class="mb-3">
+                        <label for="depart_code" class="form-label">Department</label>
+                        <select class="form-select select2-department" id="depart_code" name="depart_code">
+                            <option value="">None</option>
+                            {% for department in departments %}
+                            <option value="{{ department.depart_code }}">{{ department.depart_name }} ({{ department.depart_code }})</option>
+                            {% endfor %}
+                        </select>
+                        <small class="text-muted">Start typing to search departments</small>
+                    </div>
+                    <div class="mb-3">
+                        <div class="form-check form-switch">
+                            <input class="form-check-input" type="checkbox" id="is_admin" name="is_admin">
+                            <label class="form-check-label" for="is_admin">
+                                Make this user an administrator
+                            </label>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-save me-2"></i>Create User
+                    </button>
+                </div>
+            </form>
+            </div>
+        </div>
+    </div>
 
-    function addOrUpdateUser() {
-      let idValue = idInput.value.trim();
-      const role = roleInput.value.trim();
-      const username = usernameInput.value.trim();
-      const email = emailInput.value.trim();
-      const password = passwordInput.value.trim();
+    <!-- Edit User Modal -->
+    <div class="modal fade" id="editUserModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title"><i class="fas fa-user-edit me-2"></i>Edit User</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <form id="editUserForm" method="POST" action="">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                    <div class="modal-body" id="editUserBody">
+                        <div class="spinner-container text-center py-4">
+                            <div class="spinner-border text-primary" role="status">
+                                <span class="visually-hidden">Loading...</span>
+                            </div>
+                            <p class="mt-2">Loading user details...</p>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-save me-2"></i>Save Changes
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
 
-      if (!idValue || !username || !email || !password) return;
+    <!-- jQuery and Bootstrap JS -->
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
 
-      const id = Number(idValue);
-      if (Number.isNaN(id) || id <= 0) {
-        setInvalid("User ID must be a positive number.");
-        return;
-      }
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- DataTables JS -->
+    <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
+    <script src="https://cdn.datatables.net/1.13.6/js/dataTables.bootstrap5.min.js"></script>
+    
+    <script>
+    $(document).ready(function() {
+        // Get CSRF token from meta tag
+        var csrfToken = $('meta[name="csrf-token"]').attr('content');
+        
+        // Set up AJAX to include CSRF token in headers
+        $.ajaxSetup({
+            beforeSend: function(xhr, settings) {
+                if (!/^(GET|HEAD|OPTIONS|TRACE)$/i.test(settings.type)) {
+                    xhr.setRequestHeader("X-CSRFToken", csrfToken);
+                }
+            }
+        });
 
-      if (
-        (editingUserId === null && users.some(u => u.id === id)) ||
-        (editingUserId !== null && id !== editingUserId && users.some(u => u.id === id))
-      ) {
-        setInvalid("User ID already exists.");
-        return;
-      }
+        // Initialize DataTable without search features
+        var table = $('#usersTable').DataTable({
+            responsive: true,
+            ordering: true,
+            paging: false,
+            info: false,
+            searching: false, // Disable DataTables search
+            dom: 't' // Only show table (no search box)
+        });
+                    var searchTimer;
+            $('#searchInput').on('input', function() {
+                clearTimeout(searchTimer);
+                searchTimer = setTimeout(function() {
+                    $('#searchForm').submit();
+                }, 500); // 500ms delay before submitting
+            });
 
-      clearInvalid();
+        // Items per page selection
+        $('#perPageSelect').change(function() {
+            var perPage = $(this).val();
+            window.location.href = "{{ url_for('admin.manage_users') }}?page=1&per_page=" + perPage;
+        });
 
-      if (editingUserId !== null) {
-        users = users.map(u =>
-          u.id === editingUserId ? { id, role, username, email, password } : u
-        );
-        showAlert("User updated successfully.", "success");
-      } else {
-        users.push({ id, role, username, email, password });
-        showAlert("User added successfully.", "success");
-      }
+        // Add User Form Submission
+        $('#addUserForm').submit(function(e) {
+            e.preventDefault();
+            var form = $(this);
+            var submitBtn = form.find('button[type="submit"]');
+            
+            // Show loading state
+            submitBtn.prop('disabled', true);
+            submitBtn.html('<i class="fas fa-spinner fa-spin me-2"></i>Creating...');
+            
+            $.ajax({
+                url: form.attr('action'),
+                method: 'POST',
+                data: form.serialize(),
+                success: function(response) {
+                    // Check for redirect in response (from Flask)
+                    if (response.redirect) {
+                        window.location.href = response.redirect;
+                    } else {
+                        $('#addUserModal').modal('hide');
+                        form[0].reset();
+                        showAlert('User created successfully', 'success');
+                        // Reload after a short delay to allow the alert to show
+                        setTimeout(function() {
+                            location.reload();
+                        }, 1500);
+                    }
+                },
+                error: function(xhr) {
+                    var errorMsg = 'Failed to create user';
+                    try {
+                        var jsonResponse = JSON.parse(xhr.responseText);
+                        errorMsg = jsonResponse.error || errorMsg;
+                    } catch (e) {
+                        errorMsg = xhr.responseText || errorMsg;
+                    }
+                    showAlert(errorMsg, 'danger');
+                },
+                complete: function() {
+                    submitBtn.prop('disabled', false);
+                    submitBtn.html('<i class="fas fa-save me-2"></i>Create User');
+                }
+            });
+        });
+        // Edit User Button Click
+        $(document).on('click', '.edit-user', function() {
+            var userId = $(this).data('user-id');
+            var modal = $('#editUserModal');
+            
+            // Show loading state
+            $('#editUserBody').html(`
+                <div class="spinner-container text-center py-4">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                    <p class="mt-2">Loading user details...</p>
+                </div>
+            `);
+            
+            // Load user data via AJAX
+            $.ajax({
+                url: '/admin/api/users/' + userId,
+                method: 'GET',
+                success: function(response) {
+                    $('#editUserBody').html(`
+                        <div class="mb-3">
+                            <label for="edit_username" class="form-label">Username</label>
+                            <div class="input-group">
+                                <span class="input-group-text"><i class="fas fa-user"></i></span>
+                                <input type="text" class="form-control" id="edit_username" 
+                                    name="username" value="${response.username}" required>
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label for="edit_email" class="form-label">Email</label>
+                            <div class="input-group">
+                                <span class="input-group-text"><i class="fas fa-envelope"></i></span>
+                                <input type="email" class="form-control" id="edit_email" 
+                                    name="email" value="${response.email}" required>
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label for="edit_depart_code" class="form-label">Department</label>
+                            <div class="input-group">
+                                <span class="input-group-text"><i class="fas fa-building"></i></span>
+                                <select class="form-select" id="edit_depart_code" name="depart_code">
+                                    <option value="">None</option>
+                                    ${response.departments.map(dept => 
+                                        `<option value="${dept.depart_code}" ${dept.depart_code === response.depart_code ? 'selected' : ''}>
+                                            ${dept.depart_name}
+                                        </option>`
+                                    ).join('')}
+                                </select>
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox" id="edit_is_admin" 
+                                    name="is_admin" ${response.is_global_admin ? 'checked' : ''}>
+                                <label class="form-check-label" for="edit_is_admin">
+                                    Administrator
+                                </label>
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox" id="edit_is_active" 
+                                    name="is_active" ${response.is_active ? 'checked' : ''}>
+                                <label class="form-check-label" for="edit_is_active">
+                                    Active
+                                </label>
+                            </div>
+                        </div>
+                    `);
+                },
+                error: function(xhr) {
+                    $('#editUserBody').html(`
+                        <div class="alert alert-danger">
+                            <i class="fas fa-exclamation-triangle me-2"></i>
+                            Failed to load user details. Please try again.
+                        </div>
+                    `);
+                }
+            });
+            
+            // Set the form action
+            $('#editUserForm').attr('action', '/admin/users/' + userId + '/edit');
+            modal.modal('show');
+        });
 
-      sortUsers();
-      editingUserId = null;
-      userModal.hide();
-      renderTable();
-    }
+        // Edit User Form Submission
+        $('#editUserForm').submit(function(e) {
+            e.preventDefault();
+            var form = $(this);
+            var formData = form.serialize();
+            var submitBtn = form.find('button[type="submit"]');
+            
+            // Show loading state
+            submitBtn.prop('disabled', true);
+            submitBtn.html('<i class="fas fa-spinner fa-spin me-2"></i>Saving...');
+            
+            $.ajax({
+                url: form.attr('action'),
+                method: 'POST',
+                data: formData,
+                success: function(response) {
+                    if (response.redirect) {
+                        window.location.href = response.redirect;
+                    } else {
+                        $('#editUserModal').modal('hide');
+                        showAlert('User updated successfully', 'success');
+                        // Reload after a short delay
+                        setTimeout(function() {
+                            location.reload();
+                        }, 1500);
+                    }
+                },
+                error: function(xhr) {
+                    var errorMsg = 'Failed to update user';
+                    try {
+                        var jsonResponse = JSON.parse(xhr.responseText);
+                        errorMsg = jsonResponse.error || errorMsg;
+                    } catch (e) {
+                        errorMsg = xhr.responseText || errorMsg;
+                    }
+                    showAlert(errorMsg, 'danger');
+                },
+                complete: function() {
+                    submitBtn.prop('disabled', false);
+                    submitBtn.html('<i class="fas fa-save me-2"></i>Save Changes');
+                }
+            });
+        });
 
-    function setInvalid(message) {
-      idInput.classList.add("is-invalid");
-      idFeedback.innerText = message;
-    }
+        // Toggle Admin Status
+        $(document).on('click', '.toggle-admin', function() {
+            var userId = $(this).data('user-id');
+            var isAdmin = $(this).data('is-admin') === 'true';
+            var btn = $(this);
+            
+            if (confirm(`Are you sure you want to ${isAdmin ? 'revoke admin privileges from' : 'make admin'} this user?`)) {
+                btn.prop('disabled', true);
+                btn.html('<i class="fas fa-spinner fa-spin"></i>');
+                
+                $.ajax({
+                    url: '/admin/users/' + userId + '/toggle-admin',
+                    method: 'POST',
+                    data: {
+                        csrf_token: csrfToken
+                    },
+                    success: function(response) {
+                        if (response.success) {
+                            showAlert(`User ${isAdmin ? 'demoted' : 'promoted to admin'} successfully`, 'success');
+                            location.reload();
+                        } else {
+                            showAlert(response.message || 'Failed to update user role', 'danger');
+                            btn.prop('disabled', false);
+                            btn.html(`<i class="fas ${isAdmin ? 'fa-user-shield' : 'fa-user-times'}"></i>`);
+                        }
+                    },
+                    error: function(xhr) {
+                        showAlert('Failed to update user role: ' + (xhr.responseJSON?.error || 'Unknown error'), 'danger');
+                        btn.prop('disabled', false);
+                        btn.html(`<i class="fas ${isAdmin ? 'fa-user-shield' : 'fa-user-times'}"></i>`);
+                    }
+                });
+            }
+        });
 
-    function clearInvalid() {
-      idInput.classList.remove("is-invalid");
-      idFeedback.innerText = "";
-    }
-
-    function editUser(index) {
-      const user = getPaginatedUsers()[index];
-      editingUserId = user.id;
-      userFormLabel.innerText = "Edit User";
-
-      idInput.value = user.id;
-      roleInput.value = user.role;
-      usernameInput.value = user.username;
-      emailInput.value = user.email;
-      passwordInput.value = user.password || "";
-
-      idInput.disabled = true;
-      clearInvalid();
-      userModal.show();
-    }
-
-    function deleteUser(index) {
-      const user = getPaginatedUsers()[index];
-      if (confirm(`Delete user "${user.username}" (ID: ${user.id})?`)) {
-        users = users.filter(u => u.id !== user.id);
-        showAlert("User deleted successfully.", "danger");
-        renderTable();
-      }
-    }
-
-    function filteredUsers() {
-      const search = document.getElementById("searchInput").value.toLowerCase();
-      if (!search) return users;
-      return users.filter(u =>
-        String(u.id).includes(search) ||
-        u.role.toLowerCase().includes(search) ||
-        u.username.toLowerCase().includes(search) ||
-        u.email.toLowerCase().includes(search)
-      );
-    }
-
-    function sortUsers() {
-      users.sort((a, b) => {
-        let fieldA = a[currentSortField];
-        let fieldB = b[currentSortField];
-        if (currentSortField === "id") return sortAscending ? fieldA - fieldB : fieldB - fieldA;
-        fieldA = fieldA.toLowerCase(); fieldB = fieldB.toLowerCase();
-        return sortAscending ? fieldA.localeCompare(fieldB) : fieldB.localeCompare(fieldA);
-      });
-    }
-
-    function renderTable() {
-      const tableBody = document.getElementById("userTableBody");
-      tableBody.innerHTML = "";
-      const entries = parseInt(document.getElementById("entriesSelect").value);
-      const data = filteredUsers();
-      const totalPages = Math.ceil(data.length / entries);
-      currentPage = Math.min(currentPage, totalPages) || 1;
-      const start = (currentPage - 1) * entries;
-      const end = start + entries;
-      const pageUsers = data.slice(start, end);
-
-      pageUsers.forEach((user, index) => {
-        const row = document.createElement("tr");
-        row.innerHTML = `
-          <td>${user.id}</td>
-          <td>${capitalize(user.role)}</td>
-          <td>${escapeHtml(user.username)}</td>
-          <td>${escapeHtml(user.email)}</td>
-          <td>
-            <button class="btn btn-sm btn-warning me-1" onclick="editUser(${index})" title="Edit">
-              <i class="fas fa-edit"></i>
-            </button>
-            <button class="btn btn-sm btn-danger" onclick="deleteUser(${index})" title="Delete">
-              <i class="fas fa-trash"></i>
-            </button>
-          </td>
-        `;
-        tableBody.appendChild(row);
-      });
-
-      renderPagination(totalPages);
-      updateSortIcons();
-    }
-
-    function renderPagination(totalPages) {
-      const pagination = document.getElementById("pagination");
-      pagination.innerHTML = "";
-
-      pagination.insertAdjacentHTML(
-        "beforeend",
-        `<li class="page-item ${currentPage === 1 ? "disabled" : ""}">
-          <a class="page-link" href="#" onclick="changePage(${currentPage - 1})">&laquo;</a>
-        </li>`
-      );
-
-      let startPage = Math.max(1, currentPage - 3);
-      let endPage = Math.min(totalPages, startPage + 6);
-      if (endPage - startPage < 6) startPage = Math.max(1, endPage - 6);
-
-      for (let i = startPage; i <= endPage; i++) {
-        pagination.insertAdjacentHTML(
-          "beforeend",
-          `<li class="page-item ${i === currentPage ? "active" : ""}">
-            <a class="page-link" href="#" onclick="changePage(${i})">${i}</a>
-          </li>`
-        );
-      }
-
-      pagination.insertAdjacentHTML(
-        "beforeend",
-        `<li class="page-item ${currentPage === totalPages ? "disabled" : ""}">
-          <a class="page-link" href="#" onclick="changePage(${currentPage + 1})">&raquo;</a>
-        </li>`
-      );
-    }
-
-    function changePage(page) {
-      const entries = parseInt(document.getElementById("entriesSelect").value);
-      const totalPages = Math.ceil(filteredUsers().length / entries);
-      if (page < 1 || page > totalPages) return;
-      currentPage = page;
-      renderTable();
-    }
-
-    function getPaginatedUsers() {
-      const entries = parseInt(document.getElementById("entriesSelect").value);
-      const data = filteredUsers();
-      const start = (currentPage - 1) * entries;
-      const end = start + entries;
-      return data.slice(start, end);
-    }
-
-    function capitalize(str) {
-      return str.charAt(0).toUpperCase() + str.slice(1);
-    }
-
-    function escapeHtml(text) {
-      const map = {
-        "&": "&amp;",
-        "<": "&lt;",
-        ">": "&gt;",
-        '"': "&quot;",
-        "'": "&#039;",
-      };
-      return text.replace(/[&<>"']/g, m => map[m]);
-    }
-
-    function showAlert(message, type = "success") {
-      const alertContainer = document.getElementById("alertContainer");
-      const alertId = "alert" + Date.now();
-
-      const alertDiv = document.createElement("div");
-      alertDiv.className = `alert alert-${type} alert-dismissible fade show`;
-      alertDiv.id = alertId;
-      alertDiv.setAttribute("role", "alert");
-      alertDiv.innerHTML = `
-        <strong>${message}</strong>
-        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-      `;
-
-      alertContainer.appendChild(alertDiv);
-      setTimeout(() => {
-        const bsAlert = bootstrap.Alert.getOrCreateInstance(alertDiv);
-        bsAlert.close();
-      }, 3500);
-    }
-
-    function sortBy(field) {
-      if (currentSortField === field) {
-        sortAscending = !sortAscending;
-      } else {
-        currentSortField = field;
-        sortAscending = true;
-      }
-      sortUsers();
-      renderTable();
-    }
-
-    function updateSortIcons() {
-      const fields = ["id", "role", "username", "email"];
-      fields.forEach(field => {
-        const icon = document.getElementById("sortIcon" + capitalize(field));
-        if (field === currentSortField) {
-          icon.style.display = "inline";
-          icon.classList.toggle("fa-caret-up", sortAscending);
-          icon.classList.toggle("fa-caret-down", !sortAscending);
-        } else {
-          icon.style.display = "none";
+       // Delete User
+            $(document).on('click', '.delete-user', function() {
+                var userId = $(this).data('user-id');
+                var btn = $(this);
+                
+                if (confirm('Are you sure you want to delete this user? This action cannot be undone.')) {
+                    btn.prop('disabled', true);
+                    btn.html('<i class="fas fa-spinner fa-spin"></i>');
+                    
+                    $.ajax({
+                        url: '/admin/users/' + userId + '/delete',
+                        method: 'POST',
+                        data: {
+                            csrf_token: csrfToken
+                        },
+                        success: function(response) {
+                            if (response.redirect) {
+                                window.location.href = response.redirect;
+                            } else {
+                                showAlert('User deleted successfully', 'success');
+                                // Reload after a short delay
+                                setTimeout(function() {
+                                    location.reload();
+                                }, 1500);
+                            }
+                        },
+                        error: function(xhr) {
+                            var errorMsg = 'Failed to delete user';
+                            try {
+                                var jsonResponse = JSON.parse(xhr.responseText);
+                                errorMsg = jsonResponse.error || errorMsg;
+                            } catch (e) {
+                                errorMsg = xhr.responseText || errorMsg;
+                            }
+                            showAlert(errorMsg, 'danger');
+                            btn.prop('disabled', false);
+                            btn.html('<i class="fas fa-trash-alt"></i>');
+                        }
+                    });
+                }
+            });
+        
+        // Helper function to show alerts
+        function showAlert(message, type) {
+            var alertHtml = `
+                <div class="alert alert-${type} alert-dismissible fade show mb-4" role="alert">
+                    <i class="fas ${type === 'success' ? 'fa-check-circle' : 'fa-exclamation-circle'} me-2"></i>
+                    ${message}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+            `;
+            $('.container-fluid').prepend(alertHtml);
+            
+            // Auto-dismiss after 5 seconds
+            setTimeout(function() {
+                $('.alert').alert('close');
+            }, 5000);
         }
-      });
-    }
+    });
 
-    // Initial table render
-    sortUsers();
-    renderTable();
-  </script>
-  <script>
-  function togglePasswordVisibility() {
-    const input = document.getElementById("inputPassword");
-    const icon = document.getElementById("togglePasswordIcon");
-    const isPassword = input.type === "password";
-    input.type = isPassword ? "text" : "password";
-    icon.classList.toggle("fa-eye", !isPassword);
-    icon.classList.toggle("fa-eye-slash", isPassword);
-  }
-</script>
+    $(document).ready(function() {
+        // Initialize Select2 for department dropdown
+        $('.select2-department').select2({
+            placeholder: "Search department...",
+            allowClear: true,
+            width: '100%',
+            dropdownParent: $('#addUserModal')
+        });
 
+        // Reinitialize Select2 when modal is shown to fix rendering issues
+        $('#addUserModal').on('shown.bs.modal', function () {
+            $('.select2-department').select2({
+                placeholder: "Search department...",
+                allowClear: true,
+                width: '100%',
+                dropdownParent: $('#addUserModal')
+            });
+        });
+    });
+
+    $(document).on('click', '.view-password', function() {
+    const button = $(this);
+    const userId = button.data('user-id');
+
+    // Show loading state
+    button.html('<i class="fas fa-spinner fa-spin"></i>');
+    button.prop('disabled', true);
+
+    // Fetch password via AJAX
+    $.ajax({
+        url: `/admin/users/${userId}/get-password`,
+        method: 'GET',
+        success: function(response) {
+            // Display password (temporarily)
+            button.html(`<i class="fas fa-key"></i> ${response.password}`);
+            
+            // Hide password after 10 seconds
+            setTimeout(() => {
+                button.html('<i class="fas fa-eye"></i> Show Password');
+                button.prop('disabled', false);
+            }, 10000);
+        },
+        error: function() {
+            alert('Failed to fetch password');
+            button.html('<i class="fas fa-eye"></i> Show Password');
+            button.prop('disabled', false);
+        }
+    });
+});
+
+    </script>
 </body>
 </html>
+{% endblock %}

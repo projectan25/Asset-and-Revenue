@@ -6,6 +6,11 @@ from datetime import datetime
 
 auth_bp = Blueprint('auth', __name__, url_prefix='/auth')
 
+
+@auth_bp.route('/', methods=['GET'])
+def index():
+    return render_template('login.html')
+
 @auth_bp.route('/login', methods=['GET', 'POST'])
 def login():
     if request.method == 'POST':

@@ -1,4 +1,4 @@
-{% extends "base.html" %}
+{% extends "admin/basedash.html" %}
 
 {% block title %}Admin Dashboard{% endblock %}
 
@@ -12,7 +12,6 @@
                 <div class="card-header">Users</div>
                 <div class="card-body">
                     <h5 class="card-title">Manage Users</h5>
-                    <p class="card-text">View, add, edit, and delete system users.</p>
                     <a href="{{ url_for('admin.manage_users') }}" class="btn btn-light">Go to Users</a>
                 </div>
             </div>
@@ -23,7 +22,6 @@
                 <div class="card-header">Departments</div>
                 <div class="card-body">
                     <h5 class="card-title">Manage Departments</h5>
-                    <p class="card-text">View and manage all departments.</p>
                     <a href="{{ url_for('admin.manage_departments') }}" class="btn btn-light">Go to Departments</a>
                 </div>
             </div>
@@ -34,7 +32,6 @@
                 <div class="card-header">Accounting Hierarchy</div>
                 <div class="card-body">
                     <h5 class="card-title">Manage Accounting Structure</h5>
-                    <p class="card-text">Manage Main Headings, Major Heads, Sub Heads, and Sub Ledgers.</p>
                     <a href="{{ url_for('accounting.accounting_hierarchy') }}" class="btn btn-light">Open Hierarchy Manager</a>
                 </div>
             </div>

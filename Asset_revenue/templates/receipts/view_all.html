@@ -1,0 +1,90 @@
+{% extends "base.html" %}
+
+{% block title %}View Department Receipts{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <div class="card">
+        <div class="card-header bg-primary text-white">
+            <div class="d-flex justify-content-between align-items-center">
+                <h4><i class="bi bi-list-check me-2"></i>Department Receipts - {{ current_user.department.depart_name }}</h4>
+                <div>
+                    <button id="exportExcel" class="btn btn-success btn-sm">
+                        <i class="bi bi-file-excel me-1"></i>Export to Excel
+                    </button>
+                </div>
+            </div>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive" style="max-height: 70vh; overflow-y: auto;">
+                <table class="table table-striped table-hover" id="receiptsTable">
+                    <thead class="sticky-top bg-light">
+                        <tr>
+                            <th>Receipt ID</th>
+                            <th>Date</th>
+                            <th>Main Heading</th>
+                            <th>Major Head</th>
+                            <th>Sub Head</th>
+                            <th>Sub Ledger</th>
+                            <th>Amount (₹)</th>
+                            <th>Created By</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for receipt in receipts %}
+                        <tr>
+                            <td>{{ receipt.receipt_id }}</td>
+                            <td>{{ receipt.date.strftime('%d-%m-%Y') }}</td>
+                            <td>{{ receipt.main_heading }}</td>
+                            <td>{{ receipt.major_head }}</td>
+                            <td>{{ receipt.sub_head }}</td>
+                            <td>{{ receipt.sub_ledger }}</td>
+                            <td>{{ "%.2f"|format(receipt.amount) }}</td>
+                            <td>{{ receipt.user.username }}</td>
+                            <td>
+                                <a href="{{ url_for('receipt.view', receipt_id=receipt.receipt_id) }}" 
+                                   class="btn btn-sm btn-primary" title="View">
+                                    <i class="bi bi-eye"></i>
+                                </a>
+                            </td>
+                        </tr>
+                        {% else %}
+                        <tr>
+                            <td colspan="9" class="text-center">No receipts found in your department</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.sheetjs.com/xlsx-0.19.3/package/dist/xlsx.full.min.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Export to Excel functionality
+    document.getElementById('exportExcel').addEventListener('click', function() {
+        // Get the table element
+        const table = document.getElementById('receiptsTable');
+        
+        // Convert table to workbook
+        const workbook = XLSX.utils.table_to_book(table);
+        
+        // Generate Excel file
+        XLSX.writeFile(workbook, 'department_receipts.xlsx');
+    });
+    
+    // Make table rows clickable (optional)
+    const rows = document.querySelectorAll('#receiptsTable tbody tr[data-href]');
+    rows.forEach(row => {
+        row.addEventListener('click', function() {
+            window.location.href = this.dataset.href;
+        });
+    });
+});
+</script>
+{% endblock %}

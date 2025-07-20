@@ -92,7 +92,6 @@ class Receipt(db.Model):
     sub_ledger = db.Column(db.String(100), nullable=False)
     
     amount = db.Column(db.Float, nullable=False)
-    description = db.Column(db.String(200), nullable=True)
     date = db.Column(db.DateTime, default=datetime.utcnow)
 
     # Relationships (only for user and department)

@@ -134,28 +134,22 @@
             <div class="collapse navbar-collapse" id="navbarNav">
                 <ul class="navbar-nav me-auto">
                     <li class="nav-item">
-                        <a class="nav-link {% if request.endpoint == 'admin.admin_dashboard' %}active{% endif %}" 
+                        <!--<a class="nav-link {% if request.endpoint == 'admin.admin_dashboard' %}active{% endif %}" 
                            href="{{ url_for('admin.admin_dashboard') }}">
                             <i class="fas fa-tachometer-alt me-1"></i>Dashboard
-                        </a>
+                        </a>-->
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link {% if request.endpoint == 'admin.manage_users' %}active{% endif %}" 
+                       <!-- <a class="nav-link {% if request.endpoint == 'admin.manage_users' %}active{% endif %}" 
                            href="{{ url_for('admin.manage_users') }}">
                             <i class="fas fa-users me-1"></i>Users
-                        </a>
+                        </a>-->
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link {% if request.endpoint == 'admin.manage_departments' %}active{% endif %}" 
+                       <!---- <a class="nav-link {% if request.endpoint == 'admin.manage_departments' %}active{% endif %}" 
                            href="{{ url_for('admin.manage_departments') }}">
                             <i class="fas fa-building me-1"></i>Departments
-                        </a>
-                    </li>
-                     <li class="nav-item">
-                        <a class="nav-link {% if request.endpoint == 'accounting.accounting_hierarchy' %}active{% endif %}" 
-                           href="{{ url_for('accounting.accounting_hierarchy') }}">
-                            <i class="fas fa-building me-1"></i>Accounting Hierarchy
-                        </a>
+                        </a>-->
                     </li>
                 </ul>
                 <ul class="navbar-nav">

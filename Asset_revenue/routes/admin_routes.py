@@ -44,6 +44,8 @@ def create_user():
     is_admin = request.form.get('is_admin') == 'on'
     
     if User.query.filter_by(username=username).first():
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            return jsonify({'error': 'Username already exists'}), 400
         flash('Username already exists', 'danger')
         return redirect(url_for('admin.manage_users'))
     
@@ -58,8 +60,21 @@ def create_user():
     
     db.session.add(new_user)
     db.session.commit()
+    
+    if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+        return jsonify({'success': True, 'redirect': url_for('admin.manage_users')})
+    
     flash('User created successfully', 'success')
     return redirect(url_for('admin.manage_users'))
+
+
+@admin_bp.route('/users/<int:user_id>/get-password')
+@admin_required  # Ensure only admins can access this
+def get_user_password(user_id):
+    user = User.query.get_or_404(user_id)
+    return jsonify({
+        'password': user.password_hash  # Decrypts and returns the password
+    })
 
 @admin_bp.route('/users/<int:user_id>/toggle-admin', methods=['POST'])
 @login_required
@@ -67,12 +82,21 @@ def create_user():
 def toggle_admin(user_id):
     user = User.query.get_or_404(user_id)
     if user == current_user:
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            return jsonify({'error': 'Cannot modify your own admin status'}), 400
         flash('Cannot modify your own admin status', 'danger')
     else:
         user.is_global_admin = not user.is_global_admin
         user.user_role = 'admin' if user.is_global_admin else 'user'
         db.session.commit()
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            return jsonify({
+                'success': True,
+                'is_admin': user.is_global_admin,
+                'redirect': url_for('admin.manage_users')
+            })
         flash(f'Admin status {"granted" if user.is_global_admin else "revoked"}', 'success')
+    
     return redirect(url_for('admin.manage_users'))
 
 @admin_bp.route('/users/<int:user_id>/delete', methods=['POST'])
@@ -81,20 +105,66 @@ def toggle_admin(user_id):
 def delete_user(user_id):
     user = User.query.get_or_404(user_id)
     if user == current_user:
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            return jsonify({'error': 'Cannot delete your own account'}), 400
         flash('Cannot delete your own account', 'danger')
     else:
         db.session.delete(user)
         db.session.commit()
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            return jsonify({'success': True, 'redirect': url_for('admin.manage_users')})
         flash('User deleted successfully', 'success')
+    
     return redirect(url_for('admin.manage_users'))
 
 @admin_bp.route('/users')
 @admin_required
 def manage_users():
     page = request.args.get('page', 1, type=int)
-    users = User.query.order_by(User.username.asc()).paginate(page=page, per_page=10)
+    per_page = request.args.get('per_page', 10, type=int)
+    search_term = request.args.get('search', '').strip()
+    
+    # Base query
+    query = User.query
+    
+    # Apply search filter if search term exists
+    if search_term:
+        query = query.filter(
+            (User.username.ilike(f'%{search_term}%')) |
+            (User.email.ilike(f'%{search_term}%')) |
+            (User.department.has(depart_name=search_term)))
+    
+    # Order and paginate
+    users = query.order_by(User.username.asc()).paginate(
+        page=page, 
+        per_page=per_page, 
+        error_out=False
+    )
+    
     departments = Department.query.all()
-    return render_template('admin/users.html', users=users, departments=departments)
+    return render_template('admin/users.html', 
+                         users=users, 
+                         departments=departments,
+                         search_term=search_term)
+
+@admin_bp.route('/api/users/<int:user_id>', methods=['GET'])
+@login_required
+@admin_required
+def get_user(user_id):
+    user = User.query.get_or_404(user_id)
+    departments = Department.query.all()
+    
+    return jsonify({
+        'username': user.username,
+        'email': user.email,
+        'depart_code': user.depart_code,
+        'is_global_admin': user.is_global_admin,
+        'is_active': user.is_active,
+        'departments': [{
+            'depart_code': dept.depart_code,
+            'depart_name': dept.depart_name
+        } for dept in departments]
+    })
 
 
 ############################## Department Management###############################################################
@@ -226,3 +296,32 @@ def api_departments():
         'name': dept.depart_name,
         'user_count': len(dept.users)
     } for dept in departments])
+
+
+@admin_bp.route('/departments/<string:depart_code>/delete', methods=['POST'])
+@login_required
+@admin_required
+def delete_department(depart_code):
+    department = Department.query.get_or_404(depart_code)
+    
+    # Check if department has users
+    if department.users:
+        return jsonify({
+            'success': False,
+            'message': 'Cannot delete department with assigned users'
+        }), 400
+    
+    try:
+        db.session.delete(department)
+        db.session.commit()
+        return jsonify({
+            'success': True,
+            'message': 'Department deleted successfully'
+        })
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({
+            'success': False,
+            'message': 'Error deleting department',
+            'error': str(e)
+        }), 500

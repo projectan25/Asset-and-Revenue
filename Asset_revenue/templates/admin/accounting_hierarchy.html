@@ -1,560 +1,1643 @@
+{% extends "admin/base.html" %}
+{% block content %}
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>Accounting Hierarchy Management</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
     <style>
+        body {
+            background-color: #f4f6f9;
+            font-family: "Segoe UI", sans-serif;
+        }
+        .card {
+            border: none;
+            box-shadow: 0 0.75rem 1.5rem rgba(0, 0, 0, 0.05);
+        }
+        .table th {
+            background-color: #0d6efd;
+            color: white;
+        }
+        .control-panel {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+        .dataTables-controls {
+            display: flex;
+            gap: 1rem;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+        .dataTables-controls select,
+        .dataTables-controls input {
+            max-width: 120px;
+        }
+        .pagination {
+            margin: 0;
+        }
+        .pagination .page-item .page-link {
+            color: #0d6efd;
+            cursor: pointer;
+        }
+        .pagination .page-item.active .page-link {
+            background-color: #0d6efd;
+            border-color: #0d6efd;
+            color: white;
+            cursor: default;
+        }
+        #alertContainer {
+            position: fixed;
+            top: 1rem;
+            right: 1rem;
+            z-index: 1055;
+            min-width: 300px;
+        }
+        th.sortable {
+            cursor: pointer;
+            user-select: none;
+        }
+        th.sortable .fa-caret-down,
+        th.sortable .fa-caret-up {
+            margin-left: 5px;
+            font-size: 0.75rem;
+            color: #fff;
+            opacity: 0.75;
+        }
         .hierarchy-level {
-            border: 1px solid #ddd;
-            border-radius: 5px;
-            padding: 15px;
-            margin-bottom: 20px;
-            background-color: #f9f9f9;
+            margin-bottom: 2rem;
+            background-color: white;
+            border-radius: 0.5rem;
+            padding: 1.5rem;
+            box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
         }
         .hierarchy-title {
-            background-color: #e9ecef;
-            padding: 10px;
-            border-radius: 5px;
-            margin-bottom: 15px;
-            font-weight: bold;
+            font-size: 1.25rem;
+            font-weight: 500;
+            margin-bottom: 1.5rem;
+            color: #0d6efd;
+            border-bottom: 1px solid #dee2e6;
+            padding-bottom: 0.5rem;
         }
-        .table-responsive {
-            max-height: 300px;
-            overflow-y: auto;
-        }
-        .form-container {
+        .entity-card {
+            border: 1px solid #dee2e6;
+            border-radius: 0.5rem;
+            padding: 1rem;
+            margin-bottom: 1rem;
             background-color: white;
-            padding: 15px;
-            border-radius: 5px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-            margin-bottom: 20px;
+        }
+        .entity-title {
+            font-weight: bold;
+            margin-bottom: 0.5rem;
+            color: #0d6efd;
+        }
+        .badge-primary {
+            background-color: #0d6efd;
         }
     </style>
 </head>
 <body>
-    <div class="container py-4">
-        <h1 class="text-center mb-4">Accounting Hierarchy Management</h1>
-        
+    <div class="container py-5">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h2 class="mb-0">Accounting Hierarchy Management</h2>
+        </div>
+
+        <div id="alertContainer"></div>
+
         <!-- Main Heading Section -->
         <div class="hierarchy-level">
-            <div class="hierarchy-title">Main Headings</div>
-            <div class="form-container">
-                <form id="mainHeadingForm">
-                    <input type="hidden" id="mainHeadingId">
-                    <div class="row">
-                        <div class="col-md-8">
-                            <input type="text" class="form-control" id="mainHeadingName" placeholder="Enter main heading name" required>
-                        </div>
-                        <div class="col-md-4">
-                            <button type="submit" class="btn btn-primary me-2">Save</button>
-                            <button type="button" class="btn btn-secondary" onclick="resetMainHeadingForm()">Cancel</button>
-                        </div>
-                    </div>
-                </form>
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h3 class="hierarchy-title mb-0">Main Headings</h3>
+                <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#mainHeadingModal" onclick="openAddMainHeadingModal()">
+                      <meta name="csrf-token" content="{{ csrf_token() }}">
+                    <i class="fas fa-plus me-1"></i> Add Main Heading
+                </button>
             </div>
-            <div class="table-responsive">
-                <table class="table table-striped table-hover">
-                    <thead>
-                        <tr>
-                            <th>ID</th>
-                            <th>Name</th>
-                            <th>Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody id="mainHeadingTable">
-                        <!-- Data will be loaded here -->
-                    </tbody>
-                </table>
+
+            <div class="control-panel mb-2">
+                <div class="dataTables-controls">
+                    <label class="form-label mb-0 me-2">
+                        Show
+                        <select class="form-select d-inline-block w-auto" id="mainHeadingEntriesSelect" onchange="changeMainHeadingPage(1); renderMainHeadingTable()">
+                              
+                            <option value="5">5</option>
+                            <option value="10" selected>10</option>
+                            <option value="15">15</option>
+                        </select>
+                        entries
+                    </label>
+                    <label class="form-label mb-0">
+                        Search
+                        <input type="text" class="form-control d-inline-block w-auto" id="mainHeadingSearchInput" 
+                               oninput="changeMainHeadingPage(1); renderMainHeadingTable()" placeholder="Search...">
+                    </label>
+                </div>
+                <ul class="pagination pagination-sm" id="mainHeadingPagination"></ul>
+            </div>
+
+            <div class="card">
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        <thead>
+                            <tr>
+                                <th class="sortable" onclick="sortMainHeadings('main_heading_id')">
+                                    ID <i id="sortIconMainHeadingId" class="fas fa-caret-down"></i>
+                                </th>
+                                <th class="sortable" onclick="sortMainHeadings('name')">
+                                    Name <i id="sortIconMainHeadingName" class="fas fa-caret-down" style="display:none"></i>
+                                </th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="mainHeadingTableBody"></tbody>
+                    </table>
+                </div>
             </div>
         </div>
-        
+
         <!-- Major Head Section -->
         <div class="hierarchy-level">
-            <div class="hierarchy-title">Major Heads</div>
-            <div class="form-container">
-                <form id="majorHeadForm">
-                    <input type="hidden" id="majorHeadId">
-                    <div class="row">
-                        <div class="col-md-4">
-                            <select class="form-select" id="majorHeadMainHeading" required>
-                                <option value="">Select Main Heading</option>
-                            </select>
-                        </div>
-                        <div class="col-md-4">
-                            <input type="text" class="form-control" id="majorHeadName" placeholder="Enter major head name" required>
-                        </div>
-                        <div class="col-md-4">
-                            <button type="submit" class="btn btn-primary me-2">Save</button>
-                            <button type="button" class="btn btn-secondary" onclick="resetMajorHeadForm()">Cancel</button>
-                        </div>
-                    </div>
-                </form>
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h3 class="hierarchy-title mb-0">Major Heads</h3>
+                <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#majorHeadModal" onclick="openAddMajorHeadModal()">
+                    
+                    <i class="fas fa-plus me-1"></i> Add Major Head
+                </button>
             </div>
-            <div class="table-responsive">
-                <table class="table table-striped table-hover">
-                    <thead>
-                        <tr>
-                            <th>ID</th>
-                            <th>Main Heading</th>
-                            <th>Name</th>
-                            <th>Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody id="majorHeadTable">
-                        <!-- Data will be loaded here -->
-                    </tbody>
-                </table>
+
+            <div class="control-panel mb-2">
+                <div class="dataTables-controls">
+                    <label class="form-label mb-0 me-2">
+                        Show
+                        <select class="form-select d-inline-block w-auto" id="majorHeadEntriesSelect" onchange="changeMajorHeadPage(1); renderMajorHeadTable()">
+                            <option value="5">5</option>
+                            <option value="10" selected>10</option>
+                            <option value="15">15</option>
+                        </select>
+                        entries
+                    </label>
+                    <label class="form-label mb-0">
+                        Search
+                        <input type="text" class="form-control d-inline-block w-auto" id="majorHeadSearchInput" 
+                               oninput="changeMajorHeadPage(1); renderMajorHeadTable()" placeholder="Search...">
+                    </label>
+                </div>
+                <ul class="pagination pagination-sm" id="majorHeadPagination"></ul>
+            </div>
+
+            <div class="card">
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        <thead>
+                            <tr>
+                                <th class="sortable" onclick="sortMajorHeads('major_head_id')">
+                                    ID <i id="sortIconMajorHeadId" class="fas fa-caret-down"></i>
+                                </th>
+                                <th>Main Heading</th>
+                                <th class="sortable" onclick="sortMajorHeads('name')">
+                                    Name <i id="sortIconMajorHeadName" class="fas fa-caret-down" style="display:none"></i>
+                                </th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="majorHeadTableBody"></tbody>
+                    </table>
+                </div>
             </div>
         </div>
-        
+
         <!-- Sub Head Section -->
         <div class="hierarchy-level">
-            <div class="hierarchy-title">Sub Heads</div>
-            <div class="form-container">
-                <form id="subHeadForm">
-                    <input type="hidden" id="subHeadId">
-                    <div class="row">
-                        <div class="col-md-4">
-                            <select class="form-select" id="subHeadMajorHead" required>
-                                <option value="">Select Major Head</option>
-                            </select>
-                        </div>
-                        <div class="col-md-4">
-                            <input type="text" class="form-control" id="subHeadName" placeholder="Enter sub head name" required>
-                        </div>
-                        <div class="col-md-4">
-                            <button type="submit" class="btn btn-primary me-2">Save</button>
-                            <button type="button" class="btn btn-secondary" onclick="resetSubHeadForm()">Cancel</button>
-                        </div>
-                    </div>
-                </form>
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h3 class="hierarchy-title mb-0">Sub Heads</h3>
+                <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#subHeadModal" onclick="openAddSubHeadModal()">
+                      
+                    <i class="fas fa-plus me-1"></i> Add Sub Head
+                </button>
             </div>
-            <div class="table-responsive">
-                <table class="table table-striped table-hover">
-                    <thead>
-                        <tr>
-                            <th>ID</th>
-                            <th>Major Head</th>
-                            <th>Name</th>
-                            <th>Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody id="subHeadTable">
-                        <!-- Data will be loaded here -->
-                    </tbody>
-                </table>
+
+            <div class="control-panel mb-2">
+                <div class="dataTables-controls">
+                    <label class="form-label mb-0 me-2">
+                        Show
+                        <select class="form-select d-inline-block w-auto" id="subHeadEntriesSelect" onchange="changeSubHeadPage(1); renderSubHeadTable()">
+                              
+                            <option value="5">5</option>
+                            <option value="10" selected>10</option>
+                            <option value="15">15</option>
+                        </select>
+                        entries
+                    </label>
+                    <label class="form-label mb-0">
+                        Search
+                        <input type="text" class="form-control d-inline-block w-auto" id="subHeadSearchInput" 
+                               oninput="changeSubHeadPage(1); renderSubHeadTable()" placeholder="Search...">
+                    </label>
+                </div>
+                <ul class="pagination pagination-sm" id="subHeadPagination"></ul>
+            </div>
+
+            <div class="card">
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        <thead>
+                            <tr>
+                                <th class="sortable" onclick="sortSubHeads('sub_head_id')">
+                                    ID <i id="sortIconSubHeadId" class="fas fa-caret-down"></i>
+                                </th>
+                                <th>Major Head</th>
+                                <th class="sortable" onclick="sortSubHeads('name')">
+                                    Name <i id="sortIconSubHeadName" class="fas fa-caret-down" style="display:none"></i>
+                                </th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="subHeadTableBody"></tbody>
+                    </table>
+                </div>
             </div>
         </div>
-        
+
         <!-- Sub Ledger Section -->
         <div class="hierarchy-level">
-            <div class="hierarchy-title">Sub Ledgers</div>
-            <div class="form-container">
-                <form id="subLedgerForm">
-                    <input type="hidden" id="subLedgerId">
-                    <div class="row">
-                        <div class="col-md-4">
-                            <select class="form-select" id="subLedgerSubHead" required>
-                                <option value="">Select Sub Head</option>
-                            </select>
-                        </div>
-                        <div class="col-md-4">
-                            <input type="text" class="form-control" id="subLedgerName" placeholder="Enter sub ledger name" required>
-                        </div>
-                        <div class="col-md-4">
-                            <button type="submit" class="btn btn-primary me-2">Save</button>
-                            <button type="button" class="btn btn-secondary" onclick="resetSubLedgerForm()">Cancel</button>
-                        </div>
-                    </div>
-                </form>
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h3 class="hierarchy-title mb-0">Sub Ledgers</h3>
+                <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#subLedgerModal" onclick="openAddSubLedgerModal()">
+                      
+                    <i class="fas fa-plus me-1"></i> Add Sub Ledger
+                </button>
             </div>
-            <div class="table-responsive">
-                <table class="table table-striped table-hover">
-                    <thead>
-                        <tr>
-                            <th>ID</th>
-                            <th>Sub Head</th>
-                            <th>Name</th>
-                            <th>Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody id="subLedgerTable">
-                        <!-- Data will be loaded here -->
-                    </tbody>
-                </table>
+
+            <div class="control-panel mb-2">
+                <div class="dataTables-controls">
+                    <label class="form-label mb-0 me-2">
+                        Show
+                        <select class="form-select d-inline-block w-auto" id="subLedgerEntriesSelect" onchange="changeSubLedgerPage(1); renderSubLedgerTable()">
+                            <option value="5">5</option>
+                            <option value="10" selected>10</option>
+                            <option value="15">15</option>
+                        </select>
+                        entries
+                    </label>
+                    <label class="form-label mb-0">
+                        Search
+                        <input type="text" class="form-control d-inline-block w-auto" id="subLedgerSearchInput" 
+                               oninput="changeSubLedgerPage(1); renderSubLedgerTable()" placeholder="Search...">
+                    </label>
+                </div>
+                <ul class="pagination pagination-sm" id="subLedgerPagination"></ul>
+            </div>
+
+            <div class="card">
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        <thead>
+                            <tr>
+                                <th class="sortable" onclick="sortSubLedgers('sub_ledger_id')">
+                                    ID <i id="sortIconSubLedgerId" class="fas fa-caret-down"></i>
+                                </th>
+                                <th>Sub Head</th>
+                                <th class="sortable" onclick="sortSubLedgers('name')">
+                                    Name <i id="sortIconSubLedgerName" class="fas fa-caret-down" style="display:none"></i>
+                                </th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="subLedgerTableBody"></tbody>
+                    </table>
+                </div>
             </div>
         </div>
     </div>
 
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- Main Heading Modal -->
+    <div class="modal fade" id="mainHeadingModal" tabindex="-1" aria-labelledby="mainHeadingModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <form id="mainHeadingForm" onsubmit="event.preventDefault(); addOrUpdateMainHeading()">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="mainHeadingModalLabel">Add Main Heading</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close" onclick="resetMainHeadingForm()"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="mb-3">
+                            <label for="mainHeadingId" class="form-label">ID</label>
+                            <input type="number" class="form-control" id="mainHeadingId" min="1" required>
+                            <div class="invalid-feedback" id="mainHeadingIdFeedback"></div>
+                        </div>
+                        <div class="mb-3">
+                            <label for="mainHeadingName" class="form-label">Name</label>
+                            <input type="text" class="form-control" id="mainHeadingName" required>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" onclick="resetMainHeadingForm()">
+                            
+                            <i class="fas fa-times me-1"></i> Cancel
+                        </button>
+                        <button type="submit" class="btn btn-success">
+                            <i class="fas fa-check me-1"></i> Save
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Major Head Modal -->
+    <div class="modal fade" id="majorHeadModal" tabindex="-1" aria-labelledby="majorHeadModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <form id="majorHeadForm" onsubmit="event.preventDefault(); addOrUpdateMajorHead()">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="majorHeadModalLabel">Add Major Head</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close" onclick="resetMajorHeadForm()"></button>
+                        
+                    </div>
+                    <div class="modal-body">
+                        <div class="mb-3">
+                            <label for="majorHeadId" class="form-label">ID</label>
+                            <input type="number" class="form-control" id="majorHeadId" min="1" required>
+                            <div class="invalid-feedback" id="majorHeadIdFeedback"></div>
+                        </div>
+                        <div class="mb-3">
+                            <label for="majorHeadMainHeading" class="form-label">Main Heading</label>
+                            <select class="form-select" id="majorHeadMainHeading" required>
+                                <option value="">Select Main Heading</option>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label for="majorHeadName" class="form-label">Name</label>
+                            <input type="text" class="form-control" id="majorHeadName" required>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" onclick="resetMajorHeadForm()">
+                        
+                            <i class="fas fa-times me-1"></i> Cancel
+                        </button>
+                        <button type="submit" class="btn btn-success">
+                            <i class="fas fa-check me-1"></i> Save
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Sub Head Modal -->
+    <div class="modal fade" id="subHeadModal" tabindex="-1" aria-labelledby="subHeadModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <form id="subHeadForm" onsubmit="event.preventDefault(); addOrUpdateSubHead()">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="subHeadModalLabel">Add Sub Head</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close" onclick="resetSubHeadForm()"></button>
+                          
+                    </div>
+                    <div class="modal-body">
+                        <div class="mb-3">
+                            <label for="subHeadId" class="form-label">ID</label>
+                            <input type="number" class="form-control" id="subHeadId" min="1" required>
+                            <div class="invalid-feedback" id="subHeadIdFeedback"></div>
+                        </div>
+                        <div class="mb-3">
+                            <label for="subHeadMajorHead" class="form-label">Major Head</label>
+                            <select class="form-select" id="subHeadMajorHead" required>
+                                <option value="">Select Major Head</option>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label for="subHeadName" class="form-label">Name</label>
+                            <input type="text" class="form-control" id="subHeadName" required>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" onclick="resetSubHeadForm()">
+            
+                            <i class="fas fa-times me-1"></i> Cancel
+                        </button>
+                        <button type="submit" class="btn btn-success">
+                            <i class="fas fa-check me-1"></i> Save
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Sub Ledger Modal -->
+    <div class="modal fade" id="subLedgerModal" tabindex="-1" aria-labelledby="subLedgerModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <form id="subLedgerForm" onsubmit="event.preventDefault(); addOrUpdateSubLedger()">
+                
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="subLedgerModalLabel">Add Sub Ledger</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close" onclick="resetSubLedgerForm()"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="mb-3">
+                            <label for="subLedgerId" class="form-label">ID</label>
+                            <input type="number" class="form-control" id="subLedgerId" min="1" required>
+                            <div class="invalid-feedback" id="subLedgerIdFeedback"></div>
+                        </div>
+                        <div class="mb-3">
+                            <label for="subLedgerSubHead" class="form-label">Sub Head</label>
+                            <select class="form-select" id="subLedgerSubHead" required>
+                                <option value="">Select Sub Head</option>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label for="subLedgerName" class="form-label">Name</label>
+                            <input type="text" class="form-control" id="subLedgerName" required>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" onclick="resetSubLedgerForm()">
+                        
+                            <i class="fas fa-times me-1"></i> Cancel
+                        </button>
+                        <button type="submit" class="btn btn-success">
+                            <i class="fas fa-check me-1"></i> Save
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- View Details Modal -->
+    <div class="modal fade" id="viewModal" tabindex="-1" aria-labelledby="viewModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="viewModalLabel">View Details</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body" id="viewModalBody">
+                    <!-- Content will be loaded here -->
+                </div>
+                <div class="modal-footer">
+                    <div class="me-auto" id="viewModalCount"></div>
+                    <nav aria-label="View modal pagination">
+                        <ul class="pagination" id="viewModalPagination">
+                            <!-- Pagination will be loaded here -->
+                        </ul>
+                    </nav>
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bootstrap JS Bundle -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+
     <script>
         // Base API URL
         const API_BASE = '/api/accounting';
-        
+        const viewModal = new bootstrap.Modal(document.getElementById('viewModal'));
+
+        // Data stores
+        let mainHeadings = [];
+        let majorHeads = [];
+        let subHeads = [];
+        let subLedgers = [];
+
+        // Current editing IDs
+        let editingMainHeadingId = null;
+        let editingMajorHeadId = null;
+        let editingSubHeadId = null;
+        let editingSubLedgerId = null;
+
+        // Pagination and sorting variables for each section
+        const paginationConfig = {
+            mainHeading: {
+                currentPage: 1,
+                currentSortField: 'main_heading_id',
+                sortAscending: true
+            },
+            majorHead: {
+                currentPage: 1,
+                currentSortField: 'major_head_id',
+                sortAscending: true
+            },
+            subHead: {
+                currentPage: 1,
+                currentSortField: 'sub_head_id',
+                sortAscending: true
+            },
+            subLedger: {
+                currentPage: 1,
+                currentSortField: 'sub_ledger_id',
+                sortAscending: true
+            }
+        };
+
+        // View modal variables
+        let currentViewType = '';
+        let currentViewPage = 1;
+        let currentViewData = [];
+
         // DOM Ready
         document.addEventListener('DOMContentLoaded', function() {
             loadAllData();
-            
-            // Form submit handlers
-            document.getElementById('mainHeadingForm').addEventListener('submit', handleMainHeadingSubmit);
-            document.getElementById('majorHeadForm').addEventListener('submit', handleMajorHeadSubmit);
-            document.getElementById('subHeadForm').addEventListener('submit', handleSubHeadSubmit);
-            document.getElementById('subLedgerForm').addEventListener('submit', handleSubLedgerSubmit);
         });
-        
-        // Load all data
-        async function loadAllData() {
-            await loadMainHeadings();
-            await loadMajorHeads();
-            await loadSubHeads();
-            await loadSubLedgers();
-            
-            // Populate dropdowns
-            populateMainHeadingDropdown();
-            populateMajorHeadDropdown();
-            populateSubHeadDropdown();
+
+        // ========== Utility Functions ==========
+        function showAlert(message, type = 'success') {
+            const alertContainer = document.getElementById('alertContainer');
+            const alertId = 'alert' + Date.now();
+
+            const alertDiv = document.createElement('div');
+            alertDiv.className = `alert alert-${type} alert-dismissible fade show`;
+            alertDiv.id = alertId;
+            alertDiv.setAttribute('role', 'alert');
+            alertDiv.innerHTML = `
+                <strong>${message}</strong>
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            `;
+
+            alertContainer.appendChild(alertDiv);
+            setTimeout(() => {
+                const bsAlert = bootstrap.Alert.getOrCreateInstance(alertDiv);
+                bsAlert.close();
+            }, 3500);
         }
-        
-        // Main Heading Functions
+
+        function escapeHtml(text) {
+            const map = {
+                '&': '&amp;',
+                '<': '&lt;',
+                '>': '&gt;',
+                '"': '&quot;',
+                "'": '&#039;'
+            };
+            return text.replace(/[&<>"']/g, m => map[m]);
+        }
+
+        function capitalize(str) {
+            return str.charAt(0).toUpperCase() + str.slice(1);
+        }
+
+        // ========== Main Heading Functions ==========
         async function loadMainHeadings() {
-            const response = await fetch(`${API_BASE}/main_headings`);
-            const data = await response.json();
-            const table = document.getElementById('mainHeadingTable');
-            table.innerHTML = '';
+            try {
+                const response = await fetch(`${API_BASE}/main_headings`);
+                if (!response.ok) throw new Error('Failed to load main headings');
+                mainHeadings = await response.json();
+                renderMainHeadingTable();
+                populateMainHeadingDropdown();
+            } catch (error) {
+                console.error('Error loading main headings:', error);
+                showAlert('Failed to load main headings', 'danger');
+            }
+        }
+
+        function sortMainHeadings(field) {
+            const config = paginationConfig.mainHeading;
+            if (config.currentSortField === field) {
+                config.sortAscending = !config.sortAscending;
+            } else {
+                config.currentSortField = field;
+                config.sortAscending = true;
+            }
+            renderMainHeadingTable();
+        }
+
+        function renderMainHeadingTable() {
+            const config = paginationConfig.mainHeading;
+            const entries = parseInt(document.getElementById('mainHeadingEntriesSelect').value);
+            const search = document.getElementById('mainHeadingSearchInput').value.toLowerCase();
             
-            data.forEach(item => {
+            // Filter data
+            let filteredData = mainHeadings.filter(item => 
+                String(item.main_heading_id).includes(search) || 
+                item.name.toLowerCase().includes(search)
+            );
+
+            // Sort data
+            filteredData.sort((a, b) => {
+                let fieldA = a[config.currentSortField];
+                let fieldB = b[config.currentSortField];
+                if (config.currentSortField === 'main_heading_id') {
+                    return config.sortAscending ? fieldA - fieldB : fieldB - fieldA;
+                }
+                fieldA = fieldA.toLowerCase(); 
+                fieldB = fieldB.toLowerCase();
+                return config.sortAscending ? fieldA.localeCompare(fieldB) : fieldB.localeCompare(fieldA);
+            });
+
+            // Pagination
+            const totalPages = Math.ceil(filteredData.length / entries) || 1;
+            config.currentPage = Math.min(config.currentPage, totalPages);
+            const start = (config.currentPage - 1) * entries;
+            const end = start + entries;
+            const pageData = filteredData.slice(start, end);
+
+            // Render table
+            const tableBody = document.getElementById('mainHeadingTableBody');
+            tableBody.innerHTML = '';
+
+            pageData.forEach(item => {
                 const row = document.createElement('tr');
                 row.innerHTML = `
-                    <td>${item.id}</td>
-                    <td>${item.name}</td>
+                    <td>${item.main_heading_id}</td>
+                    <td>${escapeHtml(item.name)}</td>
                     <td>
-                        <button class="btn btn-sm btn-warning me-2" onclick="editMainHeading(${item.id}, '${item.name}')">Edit</button>
-                        <button class="btn btn-sm btn-danger" onclick="deleteMainHeading(${item.id})">Delete</button>
+                        <button class="btn btn-sm btn-danger" onclick="deleteMainHeading(${item.main_heading_id})" title="Delete">
+                            <i class="fas fa-trash"></i>
+                        </button>
                     </td>
                 `;
-                table.appendChild(row);
+                tableBody.appendChild(row);
             });
+
+            // Render pagination
+            renderPagination('mainHeadingPagination', config.currentPage, totalPages, 'changeMainHeadingPage');
+            updateSortIcons('mainHeading', config.currentSortField, config.sortAscending);
         }
+
+        function changeMainHeadingPage(page) {
+            paginationConfig.mainHeading.currentPage = page;
+            renderMainHeadingTable();
+        }
+
+        function openAddMainHeadingModal() {
+            resetMainHeadingForm();
+            editingMainHeadingId = null;
+            document.getElementById('mainHeadingModalLabel').textContent = 'Add Main Heading';
+            document.getElementById('mainHeadingId').disabled = false;
+            document.getElementById('mainHeadingIdFeedback').textContent = '';
+            document.getElementById('mainHeadingId').classList.remove('is-invalid');
+            bootstrap.Modal.getInstance(document.getElementById('mainHeadingModal')).show();
+        }
+
+        function editMainHeading(id) {
+            const item = mainHeadings.find(h => h.main_heading_id === id);
+            if (!item) return;
+
+            editingMainHeadingId = id;
+            document.getElementById('mainHeadingModalLabel').textContent = 'Edit Main Heading';
+            document.getElementById('mainHeadingId').value = item.main_heading_id;
+            document.getElementById('mainHeadingName').value = item.name;
+            document.getElementById('mainHeadingId').disabled = true;
+            document.getElementById('mainHeadingIdFeedback').textContent = '';
+            document.getElementById('mainHeadingId').classList.remove('is-invalid');
+            bootstrap.Modal.getInstance(document.getElementById('mainHeadingModal')).show();
+        }
+
+async function addOrUpdateMainHeading() {
+    const id = document.getElementById('mainHeadingId').value.trim();
+    const name = document.getElementById('mainHeadingName').value.trim();
+
+    if (!id || !name) return;
+
+    const idNum = Number(id);
+    if (Number.isNaN(idNum)) {
+        setInvalid('mainHeadingId', 'ID must be a number');
+        return;
+    }
+
+    if (idNum <= 0) {
+        setInvalid('mainHeadingId', 'ID must be positive');
+        return;
+    }
+
+    try {
+        const url = editingMainHeadingId ? 
+            `${API_BASE}/main_headings/${editingMainHeadingId}` : 
+            `${API_BASE}/main_headings`;
         
+        const method = editingMainHeadingId ? 'PUT' : 'POST';
+        
+        const response = await fetch(url, {
+            method: method,
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCSRFToken()
+            },
+            body: JSON.stringify({
+                main_heading_id: idNum,
+                name: name
+            })
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.error || errorData.message || 'Operation failed');
+        }
+
+        showAlert(`Main heading ${editingMainHeadingId ? 'updated' : 'added'} successfully`);
+        refreshPage('mainHeadings');
+        resetMainHeadingForm();
+        bootstrap.Modal.getInstance(document.getElementById('mainHeadingModal')).hide();
+        
+        // Reload all data to ensure consistency
+        await loadAllData();
+        
+        // Re-render the table
+        renderMainHeadingTable();
+    } catch (error) {
+        console.error('Error:', error);
+        showAlert(`Failed to ${editingMainHeadingId ? 'update' : 'add'} main heading: ${error.message}`, 'danger');
+    }
+}
+
+        async function deleteMainHeading(id) {
+            if (!confirm('Are you sure you want to delete this main heading? This will also delete all associated major heads, sub heads, and sub ledgers.')) {
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_BASE}/main_headings/${id}`, {
+                    method: 'DELETE',
+                    headers: {
+                        'X-CSRFToken': getCSRFToken()
+                    }
+                });
+
+                if (!response.ok) {
+                    throw new Error(await response.text());
+                }
+
+                showAlert('Main heading deleted successfully');
+                await loadAllData();
+            } catch (error) {
+                console.error('Error:', error);
+                showAlert(`Failed to delete main heading: ${error.message}`, 'danger');
+            }
+        }
+
+        function resetMainHeadingForm() {
+            document.getElementById('mainHeadingForm').reset();
+            editingMainHeadingId = null;
+        }
+
+        function setInvalid(elementId, message) {
+            const element = document.getElementById(elementId);
+            const feedbackElement = document.getElementById(`${elementId}Feedback`);
+            element.classList.add('is-invalid');
+            feedbackElement.textContent = message;
+        }
+
+        // ========== Major Head Functions ==========
+        async function loadMajorHeads() {
+            try {
+                const response = await fetch(`${API_BASE}/major_heads`);
+                if (!response.ok) throw new Error('Failed to load major heads');
+                majorHeads = await response.json();
+                renderMajorHeadTable();
+                populateMajorHeadDropdown();
+            } catch (error) {
+                console.error('Error loading major heads:', error);
+                showAlert('Failed to load major heads', 'danger');
+            }
+        }
+
+        function sortMajorHeads(field) {
+            const config = paginationConfig.majorHead;
+            if (config.currentSortField === field) {
+                config.sortAscending = !config.sortAscending;
+            } else {
+                config.currentSortField = field;
+                config.sortAscending = true;
+            }
+            renderMajorHeadTable();
+        }
+
+        function renderMajorHeadTable() {
+            const config = paginationConfig.majorHead;
+            const entries = parseInt(document.getElementById('majorHeadEntriesSelect').value);
+            const search = document.getElementById('majorHeadSearchInput').value.toLowerCase();
+            
+            // Filter data
+            let filteredData = majorHeads.filter(item => 
+                String(item.major_head_id).includes(search) || 
+                String(item.main_heading_id).includes(search) ||
+                item.name.toLowerCase().includes(search)
+            );
+
+            // Sort data
+            filteredData.sort((a, b) => {
+                let fieldA = a[config.currentSortField];
+                let fieldB = b[config.currentSortField];
+                if (config.currentSortField === 'major_head_id' || config.currentSortField === 'main_heading_id') {
+                    return config.sortAscending ? fieldA - fieldB : fieldB - fieldA;
+                }
+                fieldA = fieldA.toLowerCase(); 
+                fieldB = fieldB.toLowerCase();
+                return config.sortAscending ? fieldA.localeCompare(fieldB) : fieldB.localeCompare(fieldA);
+            });
+
+            // Pagination
+            const totalPages = Math.ceil(filteredData.length / entries) || 1;
+            config.currentPage = Math.min(config.currentPage, totalPages);
+            const start = (config.currentPage - 1) * entries;
+            const end = start + entries;
+            const pageData = filteredData.slice(start, end);
+
+            // Render table
+            const tableBody = document.getElementById('majorHeadTableBody');
+            tableBody.innerHTML = '';
+
+            // Create mapping for main heading names
+            const mainHeadingMap = {};
+            mainHeadings.forEach(h => mainHeadingMap[h.main_heading_id] = h.name);
+
+            pageData.forEach(item => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${item.major_head_id}</td>
+                    <td>${mainHeadingMap[item.main_heading_id] || 'N/A'}</td>
+                    <td>${escapeHtml(item.name)}</td>
+                    <td>
+                        <button class="btn btn-sm btn-danger" onclick="deleteMajorHead(${item.major_head_id})" title="Delete">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </td>
+                `;
+                tableBody.appendChild(row);
+            });
+
+            // Render pagination
+            renderPagination('majorHeadPagination', config.currentPage, totalPages, 'changeMajorHeadPage');
+            updateSortIcons('majorHead', config.currentSortField, config.sortAscending);
+        }
+
+        function changeMajorHeadPage(page) {
+            paginationConfig.majorHead.currentPage = page;
+            renderMajorHeadTable();
+        }
+
         function populateMainHeadingDropdown() {
             const dropdown = document.getElementById('majorHeadMainHeading');
             dropdown.innerHTML = '<option value="">Select Main Heading</option>';
             
-            fetch(`${API_BASE}/main_headings`)
-                .then(response => response.json())
-                .then(data => {
-                    data.forEach(item => {
-                        const option = document.createElement('option');
-                        option.value = item.id;
-                        option.textContent = item.name;
-                        dropdown.appendChild(option);
-                    });
-                });
-        }
-        
-        async function handleMainHeadingSubmit(e) {
-            e.preventDefault();
-            const id = document.getElementById('mainHeadingId').value;
-            const name = document.getElementById('mainHeadingName').value;
-            
-            const url = id ? `${API_BASE}/main_headings/${id}` : `${API_BASE}/main_headings`;
-            const method = id ? 'PUT' : 'POST';
-            
-            const response = await fetch(url, {
-                method: method,
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({ name })
+            mainHeadings.forEach(item => {
+                const option = document.createElement('option');
+                option.value = item.main_heading_id;
+                option.textContent = item.name;
+                dropdown.appendChild(option);
             });
-            
-            if (response.ok) {
-                resetMainHeadingForm();
-                loadAllData();
+        }
+
+        function openAddMajorHeadModal() {
+            resetMajorHeadForm();
+                        editingMajorHeadId = null;
+            document.getElementById('majorHeadModalLabel').textContent = 'Add Major Head';
+            document.getElementById('majorHeadId').disabled = false;
+            document.getElementById('majorHeadIdFeedback').textContent = '';
+            document.getElementById('majorHeadId').classList.remove('is-invalid');
+            bootstrap.Modal.getInstance(document.getElementById('majorHeadModal')).show();
+        }
+
+        function editMajorHead(id) {
+            const item = majorHeads.find(h => h.major_head_id === id);
+            if (!item) return;
+
+            editingMajorHeadId = id;
+            document.getElementById('majorHeadModalLabel').textContent = 'Edit Major Head';
+            document.getElementById('majorHeadId').value = item.major_head_id;
+            document.getElementById('majorHeadMainHeading').value = item.main_heading_id;
+            document.getElementById('majorHeadName').value = item.name;
+            document.getElementById('majorHeadId').disabled = true;
+            document.getElementById('majorHeadIdFeedback').textContent = '';
+            document.getElementById('majorHeadId').classList.remove('is-invalid');
+            bootstrap.Modal.getInstance(document.getElementById('majorHeadModal')).show();
+        }
+
+async function addOrUpdateMajorHead() {
+    const id = document.getElementById('majorHeadId').value.trim();
+    const mainHeadingId = document.getElementById('majorHeadMainHeading').value;
+    const name = document.getElementById('majorHeadName').value.trim();
+
+    if (!id || !mainHeadingId || !name) {
+        showAlert('Please fill all required fields', 'danger');
+        return;
+    }
+
+    const idNum = Number(id);
+    if (isNaN(idNum)) {
+        setInvalid('majorHeadId', 'ID must be a number');
+        return;
+    }
+
+    if (idNum <= 0) {
+        setInvalid('majorHeadId', 'ID must be positive');
+        return;
+    }
+
+    try {
+        const url = editingMajorHeadId ? 
+            `${API_BASE}/major_heads/${editingMajorHeadId}` : 
+            `${API_BASE}/major_heads`;
+        
+        const method = editingMajorHeadId ? 'PUT' : 'POST';
+        
+        const response = await fetch(url, {
+            method: method,
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCSRFToken()
+            },
+            body: JSON.stringify({
+                major_head_id: idNum,
+                main_heading_id: Number(mainHeadingId),
+                name: name
+            })
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.error || errorData.message || 'Operation failed');
+        }
+
+        showAlert(`Major head ${editingMajorHeadId ? 'updated' : 'added'} successfully`);
+        resetMajorHeadForm();
+        refreshPage('mainHeadings');
+        bootstrap.Modal.getInstance(document.getElementById('majorHeadModal')).hide();
+        
+        // Reload all data to ensure consistency
+        await loadAllData();
+        
+        // Re-render the table
+        renderMajorHeadTable();
+    } catch (error) {
+        console.error('Error:', error);
+        showAlert(`Failed to ${editingMajorHeadId ? 'update' : 'add'} major head: ${error.message}`, 'danger');
+    }
+}
+
+        async function deleteMajorHead(id) {
+            if (!confirm('Are you sure you want to delete this major head? This will also delete all associated sub heads and sub ledgers.')) {
+                return;
             }
-        }
-        
-        function editMainHeading(id, name) {
-            document.getElementById('mainHeadingId').value = id;
-            document.getElementById('mainHeadingName').value = name;
-            document.getElementById('mainHeadingName').focus();
-        }
-        
-        async function deleteMainHeading(id) {
-            if (confirm('Are you sure you want to delete this main heading? This will delete all associated records.')) {
-                const response = await fetch(`${API_BASE}/main_headings/${id}`, {
-                    method: 'DELETE'
+
+            try {
+                const response = await fetch(`${API_BASE}/major_heads/${id}`, {
+                    method: 'DELETE',
+                    headers: {
+                        'X-CSRFToken': getCSRFToken()
+                    }
                 });
-                
-                if (response.ok) {
-                    loadAllData();
+
+                if (!response.ok) {
+                    throw new Error(await response.text());
                 }
+
+                showAlert('Major head deleted successfully');
+                await loadAllData();
+            } catch (error) {
+                console.error('Error:', error);
+                showAlert(`Failed to delete major head: ${error.message}`, 'danger');
             }
         }
-        
-        function resetMainHeadingForm() {
-            document.getElementById('mainHeadingForm').reset();
-            document.getElementById('mainHeadingId').value = '';
+
+        function resetMajorHeadForm() {
+            document.getElementById('majorHeadForm').reset();
+            editingMajorHeadId = null;
         }
-        
-        // Major Head Functions
-        async function loadMajorHeads() {
-            const response = await fetch(`${API_BASE}/major_heads`);
-            const data = await response.json();
-            const table = document.getElementById('majorHeadTable');
-            table.innerHTML = '';
+
+        // ========== Sub Head Functions ==========
+        async function loadSubHeads() {
+            try {
+                const response = await fetch(`${API_BASE}/sub_heads`);
+                if (!response.ok) throw new Error('Failed to load sub heads');
+                subHeads = await response.json();
+                renderSubHeadTable();
+                populateSubHeadDropdown();
+            } catch (error) {
+                console.error('Error loading sub heads:', error);
+                showAlert('Failed to load sub heads', 'danger');
+            }
+        }
+
+        function sortSubHeads(field) {
+            const config = paginationConfig.subHead;
+            if (config.currentSortField === field) {
+                config.sortAscending = !config.sortAscending;
+            } else {
+                config.currentSortField = field;
+                config.sortAscending = true;
+            }
+            renderSubHeadTable();
+        }
+
+        function renderSubHeadTable() {
+            const config = paginationConfig.subHead;
+            const entries = parseInt(document.getElementById('subHeadEntriesSelect').value);
+            const search = document.getElementById('subHeadSearchInput').value.toLowerCase();
             
-            // Get main headings for name lookup
-            const mainHeadingsResponse = await fetch(`${API_BASE}/main_headings`);
-            const mainHeadings = await mainHeadingsResponse.json();
-            const mainHeadingMap = {};
-            mainHeadings.forEach(h => mainHeadingMap[h.id] = h.name);
-            
-            data.forEach(item => {
+            // Filter data
+            let filteredData = subHeads.filter(item => 
+                String(item.sub_head_id).includes(search) || 
+                String(item.major_head_id).includes(search) ||
+                item.name.toLowerCase().includes(search)
+            );
+
+            // Sort data
+            filteredData.sort((a, b) => {
+                let fieldA = a[config.currentSortField];
+                let fieldB = b[config.currentSortField];
+                if (config.currentSortField === 'sub_head_id' || config.currentSortField === 'major_head_id') {
+                    return config.sortAscending ? fieldA - fieldB : fieldB - fieldA;
+                }
+                fieldA = fieldA.toLowerCase(); 
+                fieldB = fieldB.toLowerCase();
+                return config.sortAscending ? fieldA.localeCompare(fieldB) : fieldB.localeCompare(fieldA);
+            });
+
+            // Pagination
+            const totalPages = Math.ceil(filteredData.length / entries) || 1;
+            config.currentPage = Math.min(config.currentPage, totalPages);
+            const start = (config.currentPage - 1) * entries;
+            const end = start + entries;
+            const pageData = filteredData.slice(start, end);
+
+            // Render table
+            const tableBody = document.getElementById('subHeadTableBody');
+            tableBody.innerHTML = '';
+
+            // Create mapping for major head names
+            const majorHeadMap = {};
+            majorHeads.forEach(h => majorHeadMap[h.major_head_id] = h.name);
+
+            pageData.forEach(item => {
                 const row = document.createElement('tr');
                 row.innerHTML = `
-                    <td>${item.id}</td>
-                    <td>${mainHeadingMap[item.main_heading_id] || 'N/A'}</td>
-                    <td>${item.name}</td>
+                    <td>${item.sub_head_id}</td>
+                    <td>${majorHeadMap[item.major_head_id] || 'N/A'}</td>
+                    <td>${escapeHtml(item.name)}</td>
                     <td>
-                        <button class="btn btn-sm btn-warning me-2" onclick="editMajorHead(${item.id}, ${item.main_heading_id}, '${item.name}')">Edit</button>
-                        <button class="btn btn-sm btn-danger" onclick="deleteMajorHead(${item.id})">Delete</button>
+                        <button class="btn btn-sm btn-danger" onclick="deleteSubHead(${item.sub_head_id})" title="Delete">
+                            <i class="fas fa-trash"></i>
+                        </button>
                     </td>
                 `;
-                table.appendChild(row);
+                tableBody.appendChild(row);
             });
+
+            // Render pagination
+            renderPagination('subHeadPagination', config.currentPage, totalPages, 'changeSubHeadPage');
+            updateSortIcons('subHead', config.currentSortField, config.sortAscending);
         }
-        
+
+        function changeSubHeadPage(page) {
+            paginationConfig.subHead.currentPage = page;
+            renderSubHeadTable();
+        }
+
         function populateMajorHeadDropdown() {
             const dropdown = document.getElementById('subHeadMajorHead');
             dropdown.innerHTML = '<option value="">Select Major Head</option>';
             
-            fetch(`${API_BASE}/major_heads`)
-                .then(response => response.json())
-                .then(data => {
-                    data.forEach(item => {
-                        const option = document.createElement('option');
-                        option.value = item.id;
-                        option.textContent = item.name;
-                        dropdown.appendChild(option);
-                    });
-                });
-        }
-        
-        async function handleMajorHeadSubmit(e) {
-            e.preventDefault();
-            const id = document.getElementById('majorHeadId').value;
-            const mainHeadingId = document.getElementById('majorHeadMainHeading').value;
-            const name = document.getElementById('majorHeadName').value;
-            
-            const url = id ? `${API_BASE}/major_heads/${id}` : `${API_BASE}/major_heads`;
-            const method = id ? 'PUT' : 'POST';
-            
-            const response = await fetch(url, {
-                method: method,
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({ name, main_heading_id: mainHeadingId })
+            majorHeads.forEach(item => {
+                const option = document.createElement('option');
+                option.value = item.major_head_id;
+                option.textContent = item.name;
+                dropdown.appendChild(option);
             });
-            
-            if (response.ok) {
-                resetMajorHeadForm();
-                loadAllData();
+        }
+
+        function openAddSubHeadModal() {
+            resetSubHeadForm();
+            editingSubHeadId = null;
+            document.getElementById('subHeadModalLabel').textContent = 'Add Sub Head';
+            document.getElementById('subHeadId').disabled = false;
+            document.getElementById('subHeadIdFeedback').textContent = '';
+            document.getElementById('subHeadId').classList.remove('is-invalid');
+            bootstrap.Modal.getInstance(document.getElementById('subHeadModal')).show();
+        }
+
+        function editSubHead(id) {
+            const item = subHeads.find(h => h.sub_head_id === id);
+            if (!item) return;
+
+            editingSubHeadId = id;
+            document.getElementById('subHeadModalLabel').textContent = 'Edit Sub Head';
+            document.getElementById('subHeadId').value = item.sub_head_id;
+            document.getElementById('subHeadMajorHead').value = item.major_head_id;
+            document.getElementById('subHeadName').value = item.name;
+            document.getElementById('subHeadId').disabled = true;
+            document.getElementById('subHeadIdFeedback').textContent = '';
+            document.getElementById('subHeadId').classList.remove('is-invalid');
+            bootstrap.Modal.getInstance(document.getElementById('subHeadModal')).show();
+        }
+
+        async function addOrUpdateSubHead() {
+            const id = document.getElementById('subHeadId').value.trim();
+            const majorHeadId = document.getElementById('subHeadMajorHead').value;
+            const name = document.getElementById('subHeadName').value.trim();
+
+            if (!id || !majorHeadId || !name) {
+                showAlert('Please fill all required fields', 'danger');
+                return;
+            }
+
+            const idNum = Number(id);
+            if (isNaN(idNum)) {
+                setInvalid('subHeadId', 'ID must be a number');
+                return;
+            }
+
+            if (idNum <= 0) {
+                setInvalid('subHeadId', 'ID must be positive');
+                return;
+            }
+
+            try {
+                const url = editingSubHeadId ? 
+                    `${API_BASE}/sub_heads/${editingSubHeadId}` : 
+                    `${API_BASE}/sub_heads`;
+                
+                const method = editingSubHeadId ? 'PUT' : 'POST';
+                
+                const response = await fetch(url, {
+                    method: method,
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': getCSRFToken()
+                    },
+                    body: JSON.stringify({
+                        sub_head_id: idNum,
+                        major_head_id: Number(majorHeadId),
+                        name: name
+                    })
+                });
+
+                if (!response.ok) {
+                    throw new Error(await response.text());
+                }
+
+                showAlert(`Sub head ${editingSubHeadId ? 'updated' : 'added'} successfully`);
+                resetSubHeadForm();
+                refreshPage('subHeads');
+                bootstrap.Modal.getInstance(document.getElementById('subHeadModal')).hide();
+                await loadAllData();
+            } catch (error) {
+                console.error('Error:', error);
+                showAlert(`Failed to ${editingSubHeadId ? 'update' : 'add'} sub head: ${error.message}`, 'danger');
             }
         }
-        
-        function editMajorHead(id, mainHeadingId, name) {
-            document.getElementById('majorHeadId').value = id;
-            document.getElementById('majorHeadMainHeading').value = mainHeadingId;
-            document.getElementById('majorHeadName').value = name;
-            document.getElementById('majorHeadName').focus();
-        }
-        
-        async function deleteMajorHead(id) {
-            if (confirm('Are you sure you want to delete this major head? This will delete all associated records.')) {
-                const response = await fetch(`${API_BASE}/major_heads/${id}`, {
-                    method: 'DELETE'
+
+        async function deleteSubHead(id) {
+            if (!confirm('Are you sure you want to delete this sub head? This will also delete all associated sub ledgers.')) {
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_BASE}/sub_heads/${id}`, {
+                    method: 'DELETE',
+                    headers: {
+                        'X-CSRFToken': getCSRFToken()
+                    }
                 });
-                
-                if (response.ok) {
-                    loadAllData();
+
+                if (!response.ok) {
+                    throw new Error(await response.text());
+                }
+
+                showAlert('Sub head deleted successfully');
+                await loadAllData();
+            } catch (error) {
+                console.error('Error:', error);
+                showAlert(`Failed to delete sub head: ${error.message}`, 'danger');
+            }
+        }
+
+        function resetSubHeadForm() {
+            document.getElementById('subHeadForm').reset();
+            editingSubHeadId = null;
+        }
+
+        // ========== Sub Ledger Functions ==========
+            async function loadSubLedgers() {
+                try {
+                    const response = await fetch(`${API_BASE}/sub_ledgers`);
+                    if (!response.ok) {
+                        const errorText = await response.text();
+                        throw new Error(errorText || 'Failed to load sub ledgers');
+                    }
+                    subLedgers = await response.json();
+                    renderSubLedgerTable();
+                    populateSubHeadDropdown();
+                } catch (error) {
+                    console.error('Error loading sub ledgers:', error);
+                    showAlert(`Failed to load sub ledgers: ${error.message}`, 'danger');
                 }
             }
+
+        function sortSubLedgers(field) {
+            const config = paginationConfig.subLedger;
+            if (config.currentSortField === field) {
+                config.sortAscending = !config.sortAscending;
+            } else {
+                config.currentSortField = field;
+                config.sortAscending = true;
+            }
+            renderSubLedgerTable();
         }
-        
-        function resetMajorHeadForm() {
-            document.getElementById('majorHeadForm').reset();
-            document.getElementById('majorHeadId').value = '';
-        }
-        
-        // Sub Head Functions
-        async function loadSubHeads() {
-            const response = await fetch(`${API_BASE}/sub_heads`);
-            const data = await response.json();
-            const table = document.getElementById('subHeadTable');
-            table.innerHTML = '';
+
+        function renderSubLedgerTable() {
+            const config = paginationConfig.subLedger;
+            const entries = parseInt(document.getElementById('subLedgerEntriesSelect').value);
+            const search = document.getElementById('subLedgerSearchInput').value.toLowerCase();
             
-            // Get major heads for name lookup
-            const majorHeadsResponse = await fetch(`${API_BASE}/major_heads`);
-            const majorHeads = await majorHeadsResponse.json();
-            const majorHeadMap = {};
-            majorHeads.forEach(h => majorHeadMap[h.id] = h.name);
-            
-            data.forEach(item => {
-                const row = document.createElement('tr');
-                row.innerHTML = `
-                    <td>${item.id}</td>
-                    <td>${majorHeadMap[item.major_head_id] || 'N/A'}</td>
-                    <td>${item.name}</td>
-                    <td>
-                        <button class="btn btn-sm btn-warning me-2" onclick="editSubHead(${item.id}, ${item.major_head_id}, '${item.name}')">Edit</button>
-                        <button class="btn btn-sm btn-danger" onclick="deleteSubHead(${item.id})">Delete</button>
-                    </td>
-                `;
-                table.appendChild(row);
+            // Filter data
+            let filteredData = subLedgers.filter(item => 
+                String(item.sub_ledger_id).includes(search) || 
+                String(item.sub_head_id).includes(search) ||
+                item.name.toLowerCase().includes(search)
+            );
+
+            // Sort data
+            filteredData.sort((a, b) => {
+                let fieldA = a[config.currentSortField];
+                let fieldB = b[config.currentSortField];
+                if (config.currentSortField === 'sub_ledger_id' || config.currentSortField === 'sub_head_id') {
+                    return config.sortAscending ? fieldA - fieldB : fieldB - fieldA;
+                }
+                fieldA = fieldA.toLowerCase(); 
+                fieldB = fieldB.toLowerCase();
+                return config.sortAscending ? fieldA.localeCompare(fieldB) : fieldB.localeCompare(fieldA);
             });
+
+            // Pagination
+            const totalPages = Math.ceil(filteredData.length / entries) || 1;
+            config.currentPage = Math.min(config.currentPage, totalPages);
+            const start = (config.currentPage - 1) * entries;
+            const end = start + entries;
+            const pageData = filteredData.slice(start, end);
+
+            // Render table
+            const tableBody = document.getElementById('subLedgerTableBody');
+            tableBody.innerHTML = '';
+
+            // Create mapping for sub head names
+            const subHeadMap = {};
+            subHeads.forEach(h => subHeadMap[h.sub_head_id] = h.name);
+        // In your renderSubLedgerTable() function, update the button handlers:
+
+        pageData.forEach(item => {
+            const row = document.createElement('tr');
+            row.innerHTML = `
+                <td>${item.sub_ledger_id}</td>
+                <td>${subHeadMap[item.sub_head_id] || 'N/A'}</td>
+                <td>${escapeHtml(item.name)}</td>
+                <td>
+                    <button class="btn btn-sm btn-danger" onclick="deleteSubLedger(${item.sub_ledger_id})" title="Delete">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </td>
+            `;
+            tableBody.appendChild(row);
+        });
+
+            // Render pagination
+            renderPagination('subLedgerPagination', config.currentPage, totalPages, 'changeSubLedgerPage');
+            updateSortIcons('subLedger', config.currentSortField, config.sortAscending);
         }
-        
+
+        function changeSubLedgerPage(page) {
+            paginationConfig.subLedger.currentPage = page;
+            renderSubLedgerTable();
+        }
+
         function populateSubHeadDropdown() {
             const dropdown = document.getElementById('subLedgerSubHead');
             dropdown.innerHTML = '<option value="">Select Sub Head</option>';
             
-            fetch(`${API_BASE}/sub_heads`)
-                .then(response => response.json())
-                .then(data => {
-                    data.forEach(item => {
-                        const option = document.createElement('option');
-                        option.value = item.id;
-                        option.textContent = item.name;
-                        dropdown.appendChild(option);
-                    });
-                });
-        }
-        
-        async function handleSubHeadSubmit(e) {
-            e.preventDefault();
-            const id = document.getElementById('subHeadId').value;
-            const majorHeadId = document.getElementById('subHeadMajorHead').value;
-            const name = document.getElementById('subHeadName').value;
-            
-            const url = id ? `${API_BASE}/sub_heads/${id}` : `${API_BASE}/sub_heads`;
-            const method = id ? 'PUT' : 'POST';
-            
-            const response = await fetch(url, {
-                method: method,
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({ name, major_head_id: majorHeadId })
-            });
-            
-            if (response.ok) {
-                resetSubHeadForm();
-                loadAllData();
-            }
-        }
-        
-        function editSubHead(id, majorHeadId, name) {
-            document.getElementById('subHeadId').value = id;
-            document.getElementById('subHeadMajorHead').value = majorHeadId;
-            document.getElementById('subHeadName').value = name;
-            document.getElementById('subHeadName').focus();
-        }
-        
-        async function deleteSubHead(id) {
-            if (confirm('Are you sure you want to delete this sub head? This will delete all associated records.')) {
-                const response = await fetch(`${API_BASE}/sub_heads/${id}`, {
-                    method: 'DELETE'
-                });
-                
-                if (response.ok) {
-                    loadAllData();
-                }
-            }
-        }
-        
-        function resetSubHeadForm() {
-            document.getElementById('subHeadForm').reset();
-            document.getElementById('subHeadId').value = '';
-        }
-        
-        // Sub Ledger Functions
-        async function loadSubLedgers() {
-            const response = await fetch(`${API_BASE}/sub_ledgers`);
-            const data = await response.json();
-            const table = document.getElementById('subLedgerTable');
-            table.innerHTML = '';
-            
-            // Get sub heads for name lookup
-            const subHeadsResponse = await fetch(`${API_BASE}/sub_heads`);
-            const subHeads = await subHeadsResponse.json();
-            const subHeadMap = {};
-            subHeads.forEach(h => subHeadMap[h.id] = h.name);
-            
-            data.forEach(item => {
-                const row = document.createElement('tr');
-                row.innerHTML = `
-                    <td>${item.id}</td>
-                    <td>${subHeadMap[item.sub_head_id] || 'N/A'}</td>
-                    <td>${item.name}</td>
-                    <td>
-                        <button class="btn btn-sm btn-warning me-2" onclick="editSubLedger(${item.id}, ${item.sub_head_id}, '${item.name}')">Edit</button>
-                        <button class="btn btn-sm btn-danger" onclick="deleteSubLedger(${item.id})">Delete</button>
-                    </td>
-                `;
-                table.appendChild(row);
+            subHeads.forEach(item => {
+                const option = document.createElement('option');
+                option.value = item.sub_head_id;
+                option.textContent = item.name;
+                dropdown.appendChild(option);
             });
         }
-        
-        async function handleSubLedgerSubmit(e) {
-            e.preventDefault();
-            const id = document.getElementById('subLedgerId').value;
-            const subHeadId = document.getElementById('subLedgerSubHead').value;
-            const name = document.getElementById('subLedgerName').value;
-            
-            const url = id ? `${API_BASE}/sub_ledgers/${id}` : `${API_BASE}/sub_ledgers`;
-            const method = id ? 'PUT' : 'POST';
-            
-            const response = await fetch(url, {
-                method: method,
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({ name, sub_head_id: subHeadId })
-            });
-            
-            if (response.ok) {
-                resetSubLedgerForm();
-                loadAllData();
-            }
+
+        function openAddSubLedgerModal() {
+            resetSubLedgerForm();
+            editingSubLedgerId = null;
+            document.getElementById('subLedgerModalLabel').textContent = 'Add Sub Ledger';
+            document.getElementById('subLedgerId').disabled = false;
+            document.getElementById('subLedgerIdFeedback').textContent = '';
+            document.getElementById('subLedgerId').classList.remove('is-invalid');
+            bootstrap.Modal.getInstance(document.getElementById('subLedgerModal')).show();
         }
-        
-        function editSubLedger(id, subHeadId, name) {
-            document.getElementById('subLedgerId').value = id;
-            document.getElementById('subLedgerSubHead').value = subHeadId;
-            document.getElementById('subLedgerName').value = name;
-            document.getElementById('subLedgerName').focus();
+
+        function editSubLedger(id) {
+            const item = subLedgers.find(l => l.sub_ledger_id === id);
+            if (!item) return;
+
+            editingSubLedgerId = id;
+            document.getElementById('subLedgerModalLabel').textContent = 'Edit Sub Ledger';
+            document.getElementById('subLedgerId').value = item.sub_ledger_id;
+            document.getElementById('subLedgerSubHead').value = item.sub_head_id;
+            document.getElementById('subLedgerName').value = item.name;  // Make sure this ID matches your HTML
+            document.getElementById('subLedgerId').disabled = true;
+            bootstrap.Modal.getInstance(document.getElementById('subLedgerModal')).show();
         }
+
+// ========== Sub Ledger Functions ==========
+async function addOrUpdateSubLedger() {
+    const id = document.getElementById('subLedgerId').value.trim();
+    const subHeadId = document.getElementById('subLedgerSubHead').value;
+    const name = document.getElementById('subLedgerName').value.trim();
+
+    if (!id || !subHeadId || !name) {
+        showAlert('Please fill all required fields', 'danger');
+        return;
+    }
+
+    try {
+        const url = editingSubLedgerId ? 
+            `${API_BASE}/sub_ledgers/${editingSubLedgerId}` : 
+            `${API_BASE}/sub_ledgers`;
         
+        const response = await fetch(url, {
+            method: editingSubLedgerId ? 'PUT' : 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCSRFToken()
+            },
+            body: JSON.stringify({
+                sub_ledger_id: Number(id),
+                sub_head_id: Number(subHeadId),
+                name: name
+            })
+        });
+
+        const result = await response.json();
+        
+        if (!response.ok) {
+            throw new Error(result.error || result.message || 'Failed to save sub ledger');
+        }
+
+        showAlert(`Sub ledger ${editingSubLedgerId ? 'updated' : 'added'} successfully`);
+        resetSubLedgerForm();
+        refreshPage('subLedgers');
+        bootstrap.Modal.getInstance(document.getElementById('subLedgerModal')).hide();
+        
+        // Reload all data to ensure consistency
+        await loadAllData();
+        
+        // Re-render the table
+        renderSubLedgerTable();
+    } catch (error) {
+        console.error('Error:', error);
+        showAlert(`Failed to ${editingSubLedgerId ? 'update' : 'add'} sub ledger: ${error.message}`, 'danger');
+    }
+}
+
         async function deleteSubLedger(id) {
-            if (confirm('Are you sure you want to delete this sub ledger?')) {
+            if (!confirm('Are you sure you want to delete this sub ledger?')) {
+                return;
+            }
+
+            try {
                 const response = await fetch(`${API_BASE}/sub_ledgers/${id}`, {
-                    method: 'DELETE'
+                    method: 'DELETE',
+                    headers: {
+                        'X-CSRFToken': getCSRFToken()
+                    }
                 });
-                
-                if (response.ok) {
-                    loadAllData();
+
+                if (!response.ok) {
+                    throw new Error(await response.text());
                 }
+
+                showAlert('Sub ledger deleted successfully');
+                await loadAllData();
+            } catch (error) {
+                console.error('Error:', error);
+                showAlert(`Failed to delete sub ledger: ${error.message}`, 'danger');
             }
         }
-        
+
         function resetSubLedgerForm() {
             document.getElementById('subLedgerForm').reset();
-            document.getElementById('subLedgerId').value = '';
+            editingSubLedgerId = null;
         }
+
+        // ========== View Functions ==========
+        function viewMainHeading(id) {
+            const item = mainHeadings.find(h => h.main_heading_id === id);
+            if (!item) return;
+
+            currentViewType = 'main_heading';
+            currentViewPage = 1;
+            currentViewData = [item];
+            
+            document.getElementById('viewModalLabel').textContent = `Main Heading: ${item.name}`;
+            renderViewModal();
+            viewModal.show();
+        }
+
+        function viewMajorHead(id) {
+            const item = majorHeads.find(h => h.major_head_id === id);
+            if (!item) return;
+
+            currentViewType = 'major_head';
+            currentViewPage = 1;
+            currentViewData = [item];
+            
+            document.getElementById('viewModalLabel').textContent = `Major Head: ${item.name}`;
+            renderViewModal();
+            viewModal.show();
+        }
+
+        function viewSubHead(id) {
+            const item = subHeads.find(h => h.sub_head_id === id);
+            if (!item) return;
+
+            currentViewType = 'sub_head';
+            currentViewPage = 1;
+            currentViewData = [item];
+            
+            document.getElementById('viewModalLabel').textContent = `Sub Head: ${item.name}`;
+            renderViewModal();
+            viewModal.show();
+        }
+
+        function viewSubLedger(id) {
+            const item = subLedgers.find(l => l.sub_ledger_id === id);
+            if (!item) return;
+
+            currentViewType = 'sub_ledger';
+            currentViewPage = 1;
+            currentViewData = [item];
+            
+            document.getElementById('viewModalLabel').textContent = `Sub Ledger: ${item.name}`;
+            renderViewModal();
+            viewModal.show();
+        }
+
+        function renderViewModal() {
+            const modalBody = document.getElementById('viewModalBody');
+            modalBody.innerHTML = '';
+
+            if (currentViewData.length === 0) {
+                modalBody.innerHTML = '<p>No data available</p>';
+                return;
+            }
+
+            const item = currentViewData[0];
+            let html = '<div class="row">';
+
+            // Create a card for each property
+            for (const [key, value] of Object.entries(item)) {
+                let displayValue = value;
+                let displayKey = key.replace(/_/g, ' ');
+
+                // Handle foreign key relationships
+                if (key === 'main_heading_id') {
+                    const heading = mainHeadings.find(h => h.main_heading_id === value);
+                    displayValue = heading ? `${heading.name} (ID: ${value})` : `ID: ${value}`;
+                } else if (key === 'major_head_id') {
+                    const head = majorHeads.find(h => h.major_head_id === value);
+                    displayValue = head ? `${head.name} (ID: ${value})` : `ID: ${value}`;
+                } else if (key === 'sub_head_id') {
+                    const head = subHeads.find(h => h.sub_head_id === value);
+                    displayValue = head ? `${head.name} (ID: ${value})` : `ID: ${value}`;
+                }
+
+                html += `
+                    <div class="col-md-6 mb-3">
+                        <div class="entity-card">
+                            <div class="entity-title">${capitalize(displayKey)}</div>
+                            <div>${escapeHtml(displayValue)}</div>
+                        </div>
+                    </div>
+                `;
+            }
+
+            html += '</div>';
+            modalBody.innerHTML = html;
+
+            // Update pagination controls
+            document.getElementById('viewModalCount').textContent = `Showing 1 of 1`;
+            document.getElementById('viewModalPagination').innerHTML = '';
+        }
+
+        // ========== Helper Functions ==========
+        function renderPagination(elementId, currentPage, totalPages, pageChangeFunction) {
+            const pagination = document.getElementById(elementId);
+            pagination.innerHTML = '';
+
+            // Previous button
+            const prevLi = document.createElement('li');
+            prevLi.className = `page-item ${currentPage === 1 ? 'disabled' : ''}`;
+            prevLi.innerHTML = `<a class="page-link" href="#" onclick="${pageChangeFunction}(${currentPage - 1}); return false;">Previous</a>`;
+            pagination.appendChild(prevLi);
+
+            // Page numbers
+            const maxVisiblePages = 5;
+            let startPage = Math.max(1, currentPage - Math.floor(maxVisiblePages / 2));
+            let endPage = Math.min(totalPages, startPage + maxVisiblePages - 1);
+
+            if (endPage - startPage + 1 < maxVisiblePages) {
+                startPage = Math.max(1, endPage - maxVisiblePages + 1);
+            }
+
+            if (startPage > 1) {
+                const firstLi = document.createElement('li');
+                firstLi.className = 'page-item';
+                firstLi.innerHTML = `<a class="page-link" href="#" onclick="${pageChangeFunction}(1); return false;">1</a>`;
+                pagination.appendChild(firstLi);
+
+                if (startPage > 2) {
+                    const ellipsisLi = document.createElement('li');
+                    ellipsisLi.className = 'page-item disabled';
+                    ellipsisLi.innerHTML = '<span class="page-link">...</span>';
+                    pagination.appendChild(ellipsisLi);
+                }
+            }
+
+            for (let i = startPage; i <= endPage; i++) {
+                const pageLi = document.createElement('li');
+                pageLi.className = `page-item ${i === currentPage ? 'active' : ''}`;
+                pageLi.innerHTML = `<a class="page-link" href="#" onclick="${pageChangeFunction}(${i}); return false;">${i}</a>`;
+                pagination.appendChild(pageLi);
+            }
+
+            if (endPage < totalPages) {
+                if (endPage < totalPages - 1) {
+                    const ellipsisLi = document.createElement('li');
+                    ellipsisLi.className = 'page-item disabled';
+                    ellipsisLi.innerHTML = '<span class="page-link">...</span>';
+                    pagination.appendChild(ellipsisLi);
+                }
+
+                const lastLi = document.createElement('li');
+                lastLi.className = 'page-item';
+                lastLi.innerHTML = `<a class="page-link" href="#" onclick="${pageChangeFunction}(${totalPages}); return false;">${totalPages}</a>`;
+                pagination.appendChild(lastLi);
+            }
+
+            // Next button
+            const nextLi = document.createElement('li');
+            nextLi.className = `page-item ${currentPage === totalPages ? 'disabled' : ''}`;
+            nextLi.innerHTML = `<a class="page-link" href="#" onclick="${pageChangeFunction}(${currentPage + 1}); return false;">Next</a>`;
+            pagination.appendChild(nextLi);
+        }
+
+        function updateSortIcons(section, currentSortField, sortAscending) {
+            // Hide all sort icons first
+            document.querySelectorAll(`#${section}Table th i`).forEach(icon => {
+                icon.style.display = 'none';
+            });
+
+            // Show the current sort icon
+            const sortIcon = document.getElementById(`sortIcon${capitalize(section)}${capitalize(currentSortField)}`);
+            if (sortIcon) {
+                sortIcon.style.display = 'inline-block';
+                sortIcon.className = sortAscending ? 'fas fa-caret-down' : 'fas fa-caret-up';
+            }
+        }
+
+        function getCSRFToken() {
+            // This should be implemented based on your Flask setup
+            // Typically, you would get it from a meta tag or cookie
+            return document.querySelector('meta[name="csrf-token"]')?.content || '';
+        }
+
+        // ========== Initialization ==========
+        async function loadAllData() {
+            try {
+                await Promise.all([
+                    loadMainHeadings(),
+                    loadMajorHeads(),
+                    loadSubHeads(),
+                    loadSubLedgers()
+                ]);
+            } catch (error) {
+                console.error('Error loading all data:', error);
+                showAlert('Failed to load data. Please try again.', 'danger');
+            }
+        }
+
+        // Initialize the application
+        loadAllData();
+
+
+        function refreshPage(section = null) {
+    // Store the active section in sessionStorage before refreshing
+    if (section) {
+        sessionStorage.setItem('activeAccountingSection', section);
+    }
+    
+    // Refresh the page
+    window.location.reload();
+}
     </script>
 </body>
 </html>
+{% endblock %}

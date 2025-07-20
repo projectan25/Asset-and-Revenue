@@ -1,4 +1,4 @@
-{% extends "base.html" %}
+{% extends "admin/base.html" %}
 {% block content %}
 <!DOCTYPE html>
 <html lang="en">
@@ -183,7 +183,6 @@
         .form-control, .form-select {
             border-radius: 6px;
             border: 1px solid rgba(0, 0, 0, 0.1);
-            padding: 0.5rem 0.75rem;
             transition: all 0.3s;
         }
         
@@ -587,6 +586,7 @@ $(document).ready(function() {
                 success: function(response) {
                     table.row(row).remove().draw();
                     showAlert('Department deleted successfully', 'success');
+                    window.location.reload();
                 },
                 error: function(xhr) {
                     showAlert('Failed to delete department: ' + (xhr.responseJSON?.error || 'Unknown error'), 'danger');

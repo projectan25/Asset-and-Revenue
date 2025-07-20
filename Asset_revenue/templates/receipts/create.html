@@ -1,0 +1,258 @@
+{% extends "base.html" %}
+
+{% block title %}Create New Receipt{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="card">
+        <div class="card-header">
+            <h4><i class="bi bi-receipt me-2"></i>Create New Receipt</h4>
+        </div>
+        <div class="card-body">
+            <form id="receiptForm" method="POST" action="{{ url_for('receipt.create') }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <!-- Hidden fields for user and department -->
+                <input type="hidden" name="user_id" value="{{ current_user.id }}">
+                <input type="hidden" name="depart_code" value="{{ current_user.department.depart_code }}">
+                
+                <!-- Accounting Hierarchy Fields -->
+                <div class="row mb-3">
+                    <div class="col-md-3">
+                        <label for="main_heading" class="form-label">Main Heading</label>
+                        <select class="form-select" id="main_heading" name="main_heading" required>
+                            <option value="" selected disabled>Select Main Heading</option>
+                            <!-- Options will be populated by JavaScript -->
+                        </select>
+                    </div>
+                    
+                    <div class="col-md-3">
+                        <label for="major_head" class="form-label">Major Head</label>
+                        <select class="form-select" id="major_head" name="major_head" disabled required>
+                            <option value="" selected disabled>Select Major Head</option>
+                        </select>
+                    </div>
+                    
+                    <div class="col-md-3">
+                        <label for="sub_head" class="form-label">Sub Head</label>
+                        <select class="form-select" id="sub_head" name="sub_head" disabled required>
+                            <option value="" selected disabled>Select Sub Head</option>
+                        </select>
+                    </div>
+                    
+                    <div class="col-md-3">
+                        <label for="sub_ledger" class="form-label">Sub Ledger</label>
+                        <select class="form-select" id="sub_ledger" name="sub_ledger" disabled required>
+                            <option value="" selected disabled>Select Sub Ledger</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <!-- Amount and Date -->
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <label for="amount" class="form-label">Amount</label>
+                        <div class="input-group">
+                            <span class="input-group-text">₹</span>
+                            <input type="number" class="form-control" id="amount" name="amount" step="0.01" min="0" required>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <label for="date" class="form-label">Date</label>
+                        <input type="date" class="form-control" id="date" name="date" required>
+                    </div>
+                </div>
+                
+                <!-- Submit Button -->
+                <div class="d-grid gap-2">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-save me-2"></i>Save Receipt
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Set today's date as default
+    document.getElementById('date').valueAsDate = new Date();
+    
+    // Fetch main headings on page load
+    fetch('/api/accounting/main_headings')
+        .then(response => response.json())
+        .then(data => {
+            const select = document.getElementById('main_heading');
+            data.forEach(item => {
+                const option = document.createElement('option');
+                option.value = item.name;
+                option.textContent = item.name;
+                select.appendChild(option);
+            });
+        });
+    
+    // When main heading changes, fetch major heads
+    document.getElementById('main_heading').addEventListener('change', function() {
+        const mainHeading = this.value;
+        const majorHeadSelect = document.getElementById('major_head');
+        
+        // Reset dependent selects
+        document.getElementById('sub_head').innerHTML = '<option value="" selected disabled>Select Sub Head</option>';
+        document.getElementById('sub_ledger').innerHTML = '<option value="" selected disabled>Select Sub Ledger</option>';
+        document.getElementById('sub_head').disabled = true;
+        document.getElementById('sub_ledger').disabled = true;
+        
+        if (!mainHeading) {
+            majorHeadSelect.disabled = true;
+            return;
+        }
+        
+        // Find the main heading ID by name
+        fetch('/api/accounting/main_headings')
+            .then(response => response.json())
+            .then(data => {
+                const heading = data.find(h => h.name === mainHeading);
+                if (heading) {
+                    fetch(`/api/accounting/major_heads?main_heading_id=${heading.main_heading_id}`)
+                        .then(response => response.json())
+                        .then(data => {
+                            majorHeadSelect.innerHTML = '<option value="" selected disabled>Select Major Head</option>';
+                            data.forEach(item => {
+                                const option = document.createElement('option');
+                                option.value = item.name;
+                                option.textContent = item.name;
+                                majorHeadSelect.appendChild(option);
+                            });
+                            majorHeadSelect.disabled = false;
+                        });
+                }
+            });
+    });
+    
+    // When major head changes, fetch sub heads
+    document.getElementById('major_head').addEventListener('change', function() {
+        const majorHead = this.value;
+        const subHeadSelect = document.getElementById('sub_head');
+        
+        // Reset dependent select
+        document.getElementById('sub_ledger').innerHTML = '<option value="" selected disabled>Select Sub Ledger</option>';
+        document.getElementById('sub_ledger').disabled = true;
+        
+        if (!majorHead) {
+            subHeadSelect.disabled = true;
+            return;
+        }
+        
+        // Find the major head ID by name
+        fetch('/api/accounting/major_heads')
+            .then(response => response.json())
+            .then(data => {
+                const head = data.find(h => h.name === majorHead);
+                if (head) {
+                    fetch(`/api/accounting/sub_heads?major_head_id=${head.major_head_id}`)
+                        .then(response => response.json())
+                        .then(data => {
+                            subHeadSelect.innerHTML = '<option value="" selected disabled>Select Sub Head</option>';
+                            data.forEach(item => {
+                                const option = document.createElement('option');
+                                option.value = item.name;
+                                option.textContent = item.name;
+                                subHeadSelect.appendChild(option);
+                            });
+                            subHeadSelect.disabled = false;
+                        });
+                }
+            });
+    });
+    
+    // When sub head changes, fetch sub ledgers
+    document.getElementById('sub_head').addEventListener('change', function() {
+        const subHead = this.value;
+        const subLedgerSelect = document.getElementById('sub_ledger');
+        
+        if (!subHead) {
+            subLedgerSelect.disabled = true;
+            return;
+        }
+        
+        // Find the sub head ID by name
+        fetch('/api/accounting/sub_heads')
+            .then(response => response.json())
+            .then(data => {
+                const head = data.find(h => h.name === subHead);
+                if (head) {
+                    fetch(`/api/accounting/sub_ledgers?sub_head_id=${head.sub_head_id}`)
+                        .then(response => response.json())
+                        .then(data => {
+                            subLedgerSelect.innerHTML = '<option value="" selected disabled>Select Sub Ledger</option>';
+                            data.forEach(item => {
+                                const option = document.createElement('option');
+                                option.value = item.name;
+                                option.textContent = item.name;
+                                subLedgerSelect.appendChild(option);
+                            });
+                            subLedgerSelect.disabled = false;
+                        });
+                }
+            });
+    });
+    
+    document.getElementById('receiptForm').addEventListener('submit', async function(e) {
+        e.preventDefault();
+        
+        // Get CSRF token from the form
+        const csrfToken = document.querySelector('input[name="csrf_token"]').value;
+        
+        // Prepare form data
+        const formData = {
+            main_heading: document.getElementById('main_heading').value,
+            major_head: document.getElementById('major_head').value,
+            sub_head: document.getElementById('sub_head').value,
+            sub_ledger: document.getElementById('sub_ledger').value,
+            amount: document.getElementById('amount').value,
+            date: document.getElementById('date').value,
+            csrf_token: csrfToken
+        };
+        
+        try {
+            const response = await fetch("{{ url_for('receipt.create') }}", {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json',
+                    'X-CSRFToken': csrfToken
+                },
+                body: JSON.stringify(formData)
+            });
+            
+            const result = await response.json();
+            
+            if (response.ok) {
+                // Show success alert
+                alert('Receipt successfully created!');
+                
+                // Optionally reset the form
+                document.getElementById('receiptForm').reset();
+                document.getElementById('date').valueAsDate = new Date();
+                
+                // Reset the accounting hierarchy selects
+                document.getElementById('main_heading').selectedIndex = 0;
+                document.getElementById('major_head').innerHTML = '<option value="" selected disabled>Select Major Head</option>';
+                document.getElementById('major_head').disabled = true;
+                document.getElementById('sub_head').innerHTML = '<option value="" selected disabled>Select Sub Head</option>';
+                document.getElementById('sub_head').disabled = true;
+                document.getElementById('sub_ledger').innerHTML = '<option value="" selected disabled>Select Sub Ledger</option>';
+                document.getElementById('sub_ledger').disabled = true;
+            } else {
+                // Show error message
+                alert('Error: ' + (result.message || 'Failed to create receipt'));
+            }
+        } catch (error) {
+            console.error('Error:', error);
+            alert('Error: ' + error.message);
+        }
+    });
+});
+</script>
+{% endblock %}
