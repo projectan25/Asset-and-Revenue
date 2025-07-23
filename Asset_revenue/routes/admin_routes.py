@@ -68,14 +68,6 @@ def create_user():
     return redirect(url_for('admin.manage_users'))
 
 
-@admin_bp.route('/users/<int:user_id>/get-password')
-@admin_required  # Ensure only admins can access this
-def get_user_password(user_id):
-    user = User.query.get_or_404(user_id)
-    return jsonify({
-        'password': user.password_hash  # Decrypts and returns the password
-    })
-
 @admin_bp.route('/users/<int:user_id>/toggle-admin', methods=['POST'])
 @login_required
 @admin_required
@@ -99,23 +91,132 @@ def toggle_admin(user_id):
     
     return redirect(url_for('admin.manage_users'))
 
+@admin_bp.route('/users/<int:user_id>/receipts/count')
+@login_required
+@admin_required
+def count_user_receipts(user_id):
+    user = User.query.get_or_404(user_id)
+    return jsonify({
+        'count': len(user.receipts)
+    })
+
+@admin_bp.route('/users/<int:user_id>/reassign-receipts', methods=['POST'])
+@login_required
+@admin_required
+def reassign_receipts(user_id):
+    try:
+        data = request.get_json()
+        new_user_id = data.get('new_user_id')
+        
+        if not new_user_id:
+            return jsonify({'error': 'New user ID is required'}), 400
+            
+        user_to_delete = User.query.get_or_404(user_id)
+        new_user = User.query.get_or_404(new_user_id)
+        
+        if user_to_delete == new_user:
+            return jsonify({'error': 'Cannot reassign to the same user'}), 400
+        
+        # Reassign all receipts
+        for receipt in user_to_delete.receipts:
+            receipt.user_id = new_user_id
+        
+        db.session.commit()
+        
+        return jsonify({
+            'success': True,
+            'message': f'All receipts reassigned to {new_user.username}'
+        })
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': str(e)}), 500
+
+@admin_bp.route('/api/users/<int:user_id>/department-check')
+@login_required
+@admin_required
+def check_user_department(user_id):
+    user = User.query.get_or_404(user_id)
+    return jsonify({
+        'has_department': user.depart_code is not None,
+        'receipt_count': len(user.receipts)
+    })
+
+@admin_bp.route('/api/departments')
+@login_required
+@admin_required
+def get_departments_for_reassign():
+    departments = Department.query.order_by(Department.depart_name).all()
+    return jsonify([{
+        'depart_code': dept.depart_code,
+        'depart_name': dept.depart_name
+    } for dept in departments])
+
+@admin_bp.route('/users/<int:user_id>/update-department', methods=['POST'])
+@login_required
+@admin_required
+def update_user_department(user_id):
+    try:
+        data = request.get_json()
+        depart_code = data.get('depart_code')
+        
+        if not depart_code:
+            return jsonify({'error': 'Department code is required'}), 400
+            
+        user = User.query.get_or_404(user_id)
+        department = Department.query.get(depart_code)
+        
+        if not department:
+            return jsonify({'error': 'Department not found'}), 404
+        
+        user.depart_code = depart_code
+        db.session.commit()
+        
+        return jsonify({
+            'success': True,
+            'department_name': department.depart_name
+        })
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': str(e)}), 500
+
 @admin_bp.route('/users/<int:user_id>/delete', methods=['POST'])
 @login_required
 @admin_required
 def delete_user(user_id):
-    user = User.query.get_or_404(user_id)
-    if user == current_user:
-        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-            return jsonify({'error': 'Cannot delete your own account'}), 400
-        flash('Cannot delete your own account', 'danger')
-    else:
+    try:
+        user = User.query.get_or_404(user_id)
+        
+        if user == current_user:
+            return jsonify({
+                'error': 'Cannot delete your own account',
+                'success': False
+            }), 400
+            
         db.session.delete(user)
         db.session.commit()
-        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-            return jsonify({'success': True, 'redirect': url_for('admin.manage_users')})
-        flash('User deleted successfully', 'success')
-    
-    return redirect(url_for('admin.manage_users'))
+        
+        return jsonify({
+            'success': True,
+            'message': 'User deleted successfully'
+        })
+        
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({
+            'error': str(e),
+            'success': False
+        }), 500
+
+@admin_bp.route('/api/users')
+@login_required
+@admin_required
+def get_users_for_reassign():
+    users = User.query.order_by(User.username).all()
+    return jsonify([{
+        'id': user.id,
+        'username': user.username,
+        'email': user.email
+    } for user in users])
 
 @admin_bp.route('/users')
 @admin_required
@@ -166,6 +267,81 @@ def get_user(user_id):
         } for dept in departments]
     })
 
+@admin_bp.route('/users/<int:user_id>/edit', methods=['POST'])
+@login_required
+@admin_required
+def edit_user(user_id):
+    user = User.query.get_or_404(user_id)
+    username = request.form.get('username')
+    email = request.form.get('email')
+    depart_code = request.form.get('depart_code')
+    is_admin = request.form.get('is_admin') == 'on'
+    new_password = request.form.get('new_password')
+    confirm_password = request.form.get('confirm_password')
+
+    # Check if username already exists (excluding current user)
+    if User.query.filter(User.username == username, User.id != user.id).first():
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            return jsonify({'error': 'Username already exists'}), 400
+        flash('Username already exists', 'danger')
+        return redirect(url_for('admin.manage_users'))
+
+    # Check if email already exists (excluding current user)
+    if User.query.filter(User.email == email, User.id != user.id).first():
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            return jsonify({'error': 'Email already exists'}), 400
+        flash('Email already exists', 'danger')
+        return redirect(url_for('admin.manage_users'))
+
+    # Update password if provided
+    if new_password:
+        if len(new_password) < 8:
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                return jsonify({'error': 'Password must be at least 8 characters'}), 400
+            flash('Password must be at least 8 characters', 'danger')
+            return redirect(url_for('admin.manage_users'))
+        
+        if new_password != confirm_password:
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                return jsonify({'error': 'Passwords do not match'}), 400
+            flash('Passwords do not match', 'danger')
+            return redirect(url_for('admin.manage_users'))
+        
+        user.password_hash = generate_password_hash(new_password)
+
+    # Update other fields
+    user.username = username
+    user.email = email
+    user.depart_code = depart_code
+    user.is_global_admin = is_admin
+    user.user_role = 'admin' if is_admin else 'user'
+
+    db.session.commit()
+
+    if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+        return jsonify({
+            'success': True,
+            'message': 'User updated successfully',
+            'redirect': url_for('admin.manage_users')
+        })
+    
+    flash('User updated successfully', 'success')
+    return redirect(url_for('admin.manage_users'))
+
+
+@admin_bp.route('/api/users/<int:user_id>/current-department')
+@login_required
+@admin_required
+def get_current_user_department(user_id):
+    user = User.query.get_or_404(user_id)
+    if not user.depart_code:
+        return jsonify({'error': 'User has no department assigned'}), 404
+    
+    department = Department.query.get(user.depart_code)
+    return jsonify({
+        'depart_code': department.depart_code,
+        'depart_name': department.depart_name
+    })
 
 ############################## Department Management###############################################################
 
